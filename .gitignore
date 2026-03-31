@@ -1,0 +1,18 @@
+# Environment variables (never commit this)
+.env
+
+# Build output
+bin/
+*.exe
+
+# Go test cache
+*.test
+*.out
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
