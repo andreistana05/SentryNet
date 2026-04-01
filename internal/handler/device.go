@@ -15,11 +15,10 @@ import (
 type DeviceHandler struct {
 	devices *service.DeviceService
 	metrics *service.MetricService
-	alerts  *service.AlertService
 }
 
-func NewDeviceHandler(devices *service.DeviceService, metrics *service.MetricService, alerts *service.AlertService) *DeviceHandler {
-	return &DeviceHandler{devices: devices, metrics: metrics, alerts: alerts}
+func NewDeviceHandler(devices *service.DeviceService, metrics *service.MetricService) *DeviceHandler {
+	return &DeviceHandler{devices: devices, metrics: metrics}
 }
 
 // List godoc
@@ -150,32 +149,4 @@ func (h *DeviceHandler) GetMetrics(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": metrics, "count": len(metrics)})
-}
-
-// GetAlerts godoc
-// GET /api/v1/devices/:id/alerts
-func (h *DeviceHandler) GetAlerts(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid device ID"})
-		return
-	}
-
-	if _, err := h.devices.Get(id); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "device not found"})
-		return
-	}
-
-	filter := repository.AlertFilter{
-		DeviceID: &id,
-		Status:   models.AlertStatus(c.Query("status")),
-		Limit:    50,
-	}
-	alerts, err := h.alerts.List(filter)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"data": alerts, "count": len(alerts)})
 }

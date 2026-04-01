@@ -11,11 +11,11 @@ import (
 
 type MetricService struct {
 	metrics repository.MetricRepository
-	alerts  *AlertService
+	alarms  *AlarmService
 }
 
-func newMetricService(metrics repository.MetricRepository, alerts *AlertService) *MetricService {
-	return &MetricService{metrics: metrics, alerts: alerts}
+func newMetricService(metrics repository.MetricRepository, alarms *AlarmService) *MetricService {
+	return &MetricService{metrics: metrics, alarms: alarms}
 }
 
 // IngestMetricItem represents a single metric in an ingest payload.
@@ -59,8 +59,8 @@ func (s *MetricService) Ingest(deviceID uuid.UUID, deviceType models.DeviceType,
 		return err
 	}
 
-	// Evaluate alert rules against the newly ingested metrics.
-	go s.alerts.EvaluateMetrics(deviceID, deviceType, items)
+	// Evaluate thresholds and create alarms as needed.
+	go s.alarms.EvaluateMetrics(deviceID, deviceType, items)
 
 	return nil
 }

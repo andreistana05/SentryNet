@@ -36,10 +36,10 @@ type DeviceRepository interface {
 
 // MetricFilter holds optional filters for querying metrics.
 type MetricFilter struct {
-	Types  []models.MetricType
-	From   time.Time
-	To     time.Time
-	Limit  int
+	Types []models.MetricType
+	From  time.Time
+	To    time.Time
+	Limit int
 }
 
 // MetricRepository defines operations on metrics.
@@ -51,33 +51,40 @@ type MetricRepository interface {
 	FindAll(filter MetricFilter) ([]models.Metric, error)
 }
 
-// AlertFilter holds optional filters for querying alerts.
-type AlertFilter struct {
-	DeviceID *uuid.UUID
-	Severity models.AlertSeverity
-	Status   models.AlertStatus
+// AlarmFilter holds optional filters for querying alarms.
+type AlarmFilter struct {
+	Status   models.TicketStatus
+	Priority models.TicketPriority
 	Limit    int
 	Offset   int
 }
 
-// AlertRepository defines operations on alerts.
-type AlertRepository interface {
-	Create(alert *models.Alert) error
-	FindAll(filter AlertFilter) ([]models.Alert, error)
-	FindByID(id uuid.UUID) (*models.Alert, error)
-	FindByDevice(deviceID uuid.UUID) ([]models.Alert, error)
-	Update(alert *models.Alert) error
-	FindActiveByDeviceAndRule(deviceID, ruleID uuid.UUID) (*models.Alert, error)
-	FindActiveByDevice(deviceID uuid.UUID) ([]models.Alert, error)
-	CountByStatus(status models.AlertStatus) (int64, error)
+// AlarmRepository defines operations on alarms.
+type AlarmRepository interface {
+	Create(alarm *models.Alarm) error
+	FindAll(filter AlarmFilter) ([]models.Alarm, error)
+	FindByID(id uuid.UUID) (*models.Alarm, error)
+	Update(alarm *models.Alarm) error
+	Delete(id uuid.UUID) error
+	CountByStatus(status models.TicketStatus) (int64, error)
 }
 
-// AlertRuleRepository defines operations on alert rules.
-type AlertRuleRepository interface {
-	Create(rule *models.AlertRule) error
-	FindAll() ([]models.AlertRule, error)
-	FindByID(id uuid.UUID) (*models.AlertRule, error)
-	FindApplicable(deviceID uuid.UUID, deviceType models.DeviceType) ([]models.AlertRule, error)
-	Update(rule *models.AlertRule) error
+// IncidentFilter holds optional filters for querying incidents.
+type IncidentFilter struct {
+	AlarmID  *uuid.UUID
+	Status   models.TicketStatus
+	Priority models.TicketPriority
+	Limit    int
+	Offset   int
+}
+
+// IncidentRepository defines operations on incidents.
+type IncidentRepository interface {
+	Create(incident *models.Incident) error
+	FindAll(filter IncidentFilter) ([]models.Incident, error)
+	FindByID(id uuid.UUID) (*models.Incident, error)
+	FindByAlarm(alarmID uuid.UUID) ([]models.Incident, error)
+	Update(incident *models.Incident) error
 	Delete(id uuid.UUID) error
+	NextIncidentNumber() (string, error)
 }

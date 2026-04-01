@@ -18,21 +18,21 @@ type Services struct {
 	Auth   *AuthService
 	Device *DeviceService
 	Metric *MetricService
-	Alert  *AlertService
+	Alarm  *AlarmService
 }
 
 func NewServices(repos *repository.Repositories, _ *redis.Client, cfg *config.Config) *Services {
 	jwtMgr := jwt.NewManager(cfg.JWTSecret, cfg.JWTExpiry)
 
-	alertSvc := newAlertService(
-		repos.Alert,
-		repos.AlertRule,
+	alarmSvc := newAlarmService(
+		repos.Alarm,
+		repos.Incident,
 		repos.Device,
 		cfg.OfflineCheckInterval,
 		cfg.HeartbeatTimeout,
 	)
 
-	metricSvc := newMetricService(repos.Metric, alertSvc)
+	metricSvc := newMetricService(repos.Metric, alarmSvc)
 	deviceSvc := newDeviceService(repos.Device)
 	authSvc := newAuthService(repos.User, jwtMgr)
 
@@ -40,6 +40,6 @@ func NewServices(repos *repository.Repositories, _ *redis.Client, cfg *config.Co
 		Auth:   authSvc,
 		Device: deviceSvc,
 		Metric: metricSvc,
-		Alert:  alertSvc,
+		Alarm:  alarmSvc,
 	}
 }

@@ -12,11 +12,11 @@ import (
 
 type StatusHandler struct {
 	devices *service.DeviceService
-	alerts  *service.AlertService
+	alarms  *service.AlarmService
 }
 
-func NewStatusHandler(devices *service.DeviceService, alerts *service.AlertService) *StatusHandler {
-	return &StatusHandler{devices: devices, alerts: alerts}
+func NewStatusHandler(devices *service.DeviceService, alarms *service.AlarmService) *StatusHandler {
+	return &StatusHandler{devices: devices, alarms: alarms}
 }
 
 // Overview godoc
@@ -38,13 +38,15 @@ func (h *StatusHandler) Overview(c *gin.Context) {
 		counts[d.Status]++
 	}
 
-	activeAlerts, _ := h.alerts.List(repository.AlertFilter{Status: models.AlertStatusActive, Limit: 1000})
-	criticalCount := 0
-	for _, a := range activeAlerts {
-		if a.Severity == models.SeverityCritical {
-			criticalCount++
+	openAlarms, _ := h.alarms.List(repository.AlarmFilter{Status: models.StatusOpen, Limit: 1000})
+	highPriorityCount := 0
+	for _, a := range openAlarms {
+		if a.Priority == models.PriorityHigh {
+			highPriorityCount++
 		}
 	}
+
+	openIncidents, _ := h.alarms.ListIncidents(repository.IncidentFilter{Status: models.StatusOpen, Limit: 1000})
 
 	c.JSON(http.StatusOK, gin.H{
 		"devices": gin.H{
@@ -53,9 +55,12 @@ func (h *StatusHandler) Overview(c *gin.Context) {
 			"offline": counts[models.DeviceStatusOffline],
 			"unknown": counts[models.DeviceStatusUnknown],
 		},
-		"alerts": gin.H{
-			"active":   len(activeAlerts),
-			"critical": criticalCount,
+		"alarms": gin.H{
+			"open":          len(openAlarms),
+			"high_priority": highPriorityCount,
+		},
+		"incidents": gin.H{
+			"open": len(openIncidents),
 		},
 	})
 }

@@ -35,10 +35,10 @@ func New(services *service.Services, cfg *config.Config) *gin.Engine {
 
 	// Handlers
 	authH := handler.NewAuthHandler(services.Auth)
-	deviceH := handler.NewDeviceHandler(services.Device, services.Metric, services.Alert)
-	alertH := handler.NewAlertHandler(services.Alert)
+	deviceH := handler.NewDeviceHandler(services.Device, services.Metric)
+	alarmH := handler.NewAlarmHandler(services.Alarm)
 	ingestH := handler.NewIngestHandler(services.Device, services.Metric)
-	statusH := handler.NewStatusHandler(services.Device, services.Alert)
+	statusH := handler.NewStatusHandler(services.Device, services.Alarm)
 
 	api := r.Group("/api/v1")
 
@@ -72,25 +72,23 @@ func New(services *service.Services, cfg *config.Config) *gin.Engine {
 			devices.PUT("/:id", deviceH.Update)
 			devices.DELETE("/:id", deviceH.Delete)
 			devices.GET("/:id/metrics", deviceH.GetMetrics)
-			devices.GET("/:id/alerts", deviceH.GetAlerts)
 		}
 
-		// Alerts
-		alerts := protected.Group("/alerts")
+		// Alarms
+		alarms := protected.Group("/alarms")
 		{
-			alerts.GET("", alertH.ListAlerts)
-			alerts.GET("/:id", alertH.GetAlert)
-			alerts.PUT("/:id/acknowledge", alertH.Acknowledge)
-			alerts.PUT("/:id/resolve", alertH.Resolve)
+			alarms.GET("", alarmH.ListAlarms)
+			alarms.GET("/:id", alarmH.GetAlarm)
+			alarms.PUT("/:id/in-progress", alarmH.SetInProgress)
+			alarms.PUT("/:id/close", alarmH.CloseAlarm)
 		}
 
-		// Alert Rules — write operations restricted to admin/operator
-		rules := protected.Group("/alert-rules")
+		// Incidents
+		incidents := protected.Group("/incidents")
 		{
-			rules.GET("", alertH.ListRules)
-			rules.POST("", middleware.RequireRole("admin", "operator"), alertH.CreateRule)
-			rules.PUT("/:id", middleware.RequireRole("admin", "operator"), alertH.UpdateRule)
-			rules.DELETE("/:id", middleware.RequireRole("admin"), alertH.DeleteRule)
+			incidents.GET("", alarmH.ListIncidents)
+			incidents.GET("/:id", alarmH.GetIncident)
+			incidents.PUT("/:id/close", alarmH.CloseIncident)
 		}
 	}
 

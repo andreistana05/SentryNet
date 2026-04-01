@@ -39,7 +39,7 @@ func main() {
 	// Start background worker that marks stale devices as offline.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	services.Alert.StartWorker(ctx)
+	services.Alarm.StartWorker(ctx)
 
 	r := router.New(services, cfg)
 

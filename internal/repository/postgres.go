@@ -34,26 +34,26 @@ func Migrate(db *gorm.DB) error {
 		&models.User{},
 		&models.Device{},
 		&models.Metric{},
-		&models.AlertRule{},
-		&models.Alert{},
+		&models.Alarm{},
+		&models.Incident{},
 	)
 }
 
 // Repositories is a container for all repository implementations.
 type Repositories struct {
-	User      UserRepository
-	Device    DeviceRepository
-	Metric    MetricRepository
-	Alert     AlertRepository
-	AlertRule AlertRuleRepository
+	User     UserRepository
+	Device   DeviceRepository
+	Metric   MetricRepository
+	Alarm    AlarmRepository
+	Incident IncidentRepository
 }
 
 func NewRepositories(db *gorm.DB) *Repositories {
 	return &Repositories{
-		User:      newUserRepository(db),
-		Device:    newDeviceRepository(db),
-		Metric:    newMetricRepository(db),
-		Alert:     newAlertRepository(db),
-		AlertRule: newAlertRuleRepository(db),
+		User:     newUserRepository(db),
+		Device:   newDeviceRepository(db),
+		Metric:   newMetricRepository(db),
+		Alarm:    newAlarmRepository(db),
+		Incident: newIncidentRepository(db),
 	}
 }
