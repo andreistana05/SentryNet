@@ -42,6 +42,17 @@ services:
       redis:
         condition: service_healthy
 
+  monitor:
+    build: ./monitor
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - BACKEND_URL=http://backend:8080
+      - NETWORK_RANGE=192.168.0.0/24
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
   redis_data:

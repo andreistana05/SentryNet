@@ -53,6 +53,7 @@ func New(services *service.Services, cfg *config.Config) *gin.Engine {
 	ingest := api.Group("/ingest")
 	ingest.Use(middleware.APIKey(cfg.IngestAPIKey))
 	{
+		ingest.GET("/devices", ingestH.Devices)
 		ingest.POST("/metrics", ingestH.Metrics)
 		ingest.POST("/heartbeat", ingestH.Heartbeat)
 	}
@@ -67,6 +68,7 @@ func New(services *service.Services, cfg *config.Config) *gin.Engine {
 		devices := protected.Group("/devices")
 		{
 			devices.GET("", deviceH.List)
+			devices.GET("/new", deviceH.ListNew)
 			devices.POST("", deviceH.Create)
 			devices.GET("/:id", deviceH.Get)
 			devices.PUT("/:id", deviceH.Update)

@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -37,6 +38,54 @@ func (h *DeviceHandler) List(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": devices, "count": len(devices)})
+}
+
+// ListNew godoc
+// GET /api/v1/devices/new?since=<RFC3339 or duration>
+// Examples:
+//
+//	?since=2024-01-15T10:00:00Z   — absolute timestamp (RFC3339)
+//	?since=24h                    — last 24 hours
+//	?since=7d                     — last 7 days
+func (h *DeviceHandler) ListNew(c *gin.Context) {
+	raw := c.Query("since")
+	if raw == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "query param 'since' is required (RFC3339 timestamp or duration like 24h, 7d)"})
+		return
+	}
+
+	var since time.Time
+	// Try duration first (e.g. "24h", "7d")
+	if raw[len(raw)-1] == 'd' {
+		days, err := time.ParseDuration(raw[:len(raw)-1] + "h")
+		if err == nil {
+			since = time.Now().Add(-days * 24)
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid duration: use formats like 24h or 7d"})
+			return
+		}
+	} else if d, err := time.ParseDuration(raw); err == nil {
+		since = time.Now().Add(-d)
+	} else if t, err := time.Parse(time.RFC3339, raw); err == nil {
+		since = t
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid 'since' value: use RFC3339 (2024-01-15T10:00:00Z) or duration (24h, 7d)"})
+		return
+	}
+
+	filter := repository.DeviceFilter{
+		Type:   models.DeviceType(c.Query("type")),
+		Status: models.DeviceStatus(c.Query("status")),
+		Since:  &since,
+	}
+
+	devices, err := h.devices.List(filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": devices, "count": len(devices), "since": since.UTC().Format(time.RFC3339)})
 }
 
 // Create godoc

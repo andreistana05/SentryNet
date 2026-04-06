@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"sentrynet/backend/internal/models"
+	"sentrynet/backend/internal/repository"
 	"sentrynet/backend/internal/service"
 )
 
@@ -57,6 +58,18 @@ func (h *IngestHandler) Metrics(c *gin.Context) {
 	_ = h.devices.ProcessHeartbeat(device.ID)
 
 	c.JSON(http.StatusAccepted, gin.H{"device_id": device.ID, "accepted": len(req.Metrics)})
+}
+
+// Devices godoc
+// GET /api/v1/ingest/devices
+// Returns all registered devices so the monitor knows what to ping.
+func (h *IngestHandler) Devices(c *gin.Context) {
+	devices, err := h.devices.List(repository.DeviceFilter{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": devices, "count": len(devices)})
 }
 
 // Heartbeat godoc

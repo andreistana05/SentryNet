@@ -19,6 +19,7 @@ type DeviceFilter struct {
 	Type   models.DeviceType
 	Status models.DeviceStatus
 	Search string // matches hostname or IP
+	Since  *time.Time
 }
 
 // DeviceRepository defines operations on devices.

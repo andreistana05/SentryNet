@@ -35,6 +35,9 @@ func (r *deviceRepository) FindAll(filter DeviceFilter) ([]models.Device, error)
 		pattern := "%" + filter.Search + "%"
 		q = q.Where("hostname ILIKE ? OR ip_address ILIKE ? OR name ILIKE ?", pattern, pattern, pattern)
 	}
+	if filter.Since != nil {
+		q = q.Where("created_at >= ?", filter.Since)
+	}
 
 	if err := q.Order("name ASC").Find(&devices).Error; err != nil {
 		return nil, err
