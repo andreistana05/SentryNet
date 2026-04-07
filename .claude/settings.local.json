@@ -4,7 +4,12 @@
       "Bash(cd \"F:/facultate/SentryNet/SentryNet app\" && go mod tidy 2>&1)",
       "Bash(cd \"F:/facultate/SentryNet/SentryNet app\" && go build ./... 2>&1)",
       "Bash(docker exec:*)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(schtasks //end //tn \"SentryNet Agent\")",
+      "Bash(schtasks //run //tn \"SentryNet Agent\")",
+      "Bash(timeout 15 python main.py)",
+      "Bash(python -c ':*)",
+      "Bash(rm -f test_run.log)"
     ]
   }
 }

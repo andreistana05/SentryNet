@@ -8,7 +8,11 @@ set BACKEND_URL=http://localhost:8080
 set INGEST_API_KEY=sk-infrapulse-7f3Kx9mQpL2wNvR8dYcT4jZbHnUeA6sW
 set METRICS_INTERVAL=10
 set HEARTBEAT_INTERVAL=30
+set AGENT_IP=192.168.1.124
 
 cd /d "%~dp0"
-python -m pip install psutil --quiet
-python main.py >> "%~dp0agent.log" 2>&1
+
+REM Only install psutil if it is not already present (avoids pip hanging in background)
+python -c "import psutil" >nul 2>&1 || python -m pip install psutil --quiet >> "%~dp0agent.log" 2>&1
+
+python -u main.py >> "%~dp0agent.log" 2>&1
