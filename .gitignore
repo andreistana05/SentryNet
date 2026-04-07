@@ -21,3 +21,20 @@ Thumbs.db
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Python virtual env
+.venv/
+venv/
+
+# Python cache
+*.pyo
+*.pyd
+
+# Local config (contains device_id, api keys, etc.)
+config.json
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
