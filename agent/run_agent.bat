@@ -10,4 +10,5 @@ set METRICS_INTERVAL=10
 set HEARTBEAT_INTERVAL=30
 
 cd /d "%~dp0"
+python -m pip install psutil --quiet
 python main.py >> "%~dp0agent.log" 2>&1
