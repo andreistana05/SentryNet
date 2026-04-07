@@ -90,13 +90,33 @@ type IncidentRepository interface {
 	NextIncidentNumber() (string, error)
 }
 
+// ProblemFilter holds optional filters for querying problems.
+type ProblemFilter struct {
+	Status    models.TicketStatus
+	Priority  models.TicketPriority
+	AlarmName string
+	Limit     int
+	Offset    int
+}
+
+// ProblemRepository defines operations on problems.
+type ProblemRepository interface {
+	Create(problem *models.Problem) error
+	FindAll(filter ProblemFilter) ([]models.Problem, error)
+	FindByID(id uuid.UUID) (*models.Problem, error)
+	FindOpenByAlarmName(alarmName string) (*models.Problem, error)
+	Update(problem *models.Problem) error
+	Delete(id uuid.UUID) error
+	NextProblemNumber() (string, error)
+}
+
 // TicketFilter holds optional filters for querying tickets.
 type TicketFilter struct {
-	AlarmID  *uuid.UUID
-	Status   models.TicketStatus
-	Priority models.TicketPriority
-	Limit    int
-	Offset   int
+	IncidentID *uuid.UUID
+	Status     models.TicketStatus
+	Priority   models.TicketPriority
+	Limit      int
+	Offset     int
 }
 
 // TicketRepository defines operations on tickets and their audit updates.
@@ -104,7 +124,7 @@ type TicketRepository interface {
 	Create(ticket *models.Ticket) error
 	FindAll(filter TicketFilter) ([]models.Ticket, error)
 	FindByID(id uuid.UUID) (*models.Ticket, error)
-	FindByAlarmID(alarmID uuid.UUID) (*models.Ticket, error)
+	FindByIncidentID(incidentID uuid.UUID) (*models.Ticket, error)
 	Update(ticket *models.Ticket) error
 	AddUpdate(update *models.TicketUpdate) error
 	NextTicketNumber() (string, error)

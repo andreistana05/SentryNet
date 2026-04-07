@@ -177,6 +177,75 @@ func (h *AlarmHandler) CloseIncident(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "incident closed"})
 }
 
+// ListProblems godoc
+// GET /api/v1/problems
+func (h *AlarmHandler) ListProblems(c *gin.Context) {
+	filter := repository.ProblemFilter{
+		Status:    models.TicketStatus(c.Query("status")),
+		Priority:  models.TicketPriority(c.Query("priority")),
+		AlarmName: c.Query("alarm_name"),
+		Limit:     100,
+	}
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if n, err := strconv.Atoi(limitStr); err == nil && n > 0 {
+			filter.Limit = n
+		}
+	}
+	if offsetStr := c.Query("offset"); offsetStr != "" {
+		if n, err := strconv.Atoi(offsetStr); err == nil && n >= 0 {
+			filter.Offset = n
+		}
+	}
+
+	problems, err := h.svc.ListProblems(filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": problems, "count": len(problems)})
+}
+
+// GetProblem godoc
+// GET /api/v1/problems/:id
+func (h *AlarmHandler) GetProblem(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid problem ID"})
+		return
+	}
+
+	problem, err := h.svc.GetProblem(id)
+	if err != nil {
+		if errors.Is(err, service.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "problem not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, problem)
+}
+
+// CloseProblem godoc
+// PUT /api/v1/problems/:id/close
+func (h *AlarmHandler) CloseProblem(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid problem ID"})
+		return
+	}
+
+	if err := h.svc.CloseProblem(id); err != nil {
+		if errors.Is(err, service.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "problem not found"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "problem closed"})
+}
+
 // ListTickets godoc
 // GET /api/v1/tickets
 func (h *AlarmHandler) ListTickets(c *gin.Context) {

@@ -93,6 +93,14 @@ func New(services *service.Services, cfg *config.Config) *gin.Engine {
 			incidents.PUT("/:id/close", alarmH.CloseIncident)
 		}
 
+		// Problems
+		problems := protected.Group("/problems")
+		{
+			problems.GET("", alarmH.ListProblems)
+			problems.GET("/:id", alarmH.GetProblem)
+			problems.PUT("/:id/close", alarmH.CloseProblem)
+		}
+
 		// Tickets — admin only
 		tickets := protected.Group("/tickets")
 		tickets.Use(middleware.RequireRole("admin"))

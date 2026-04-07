@@ -23,7 +23,7 @@ const (
 )
 
 // Alarm represents a single alarm event from a monitored device.
-// When the same alarm repeats, an Incident is created.
+// When a new unique alarm fires, an Incident is created. Duplicate active alarms are escalated.
 type Alarm struct {
 	ID               uuid.UUID      `gorm:"type:uuid;primaryKey"                        json:"id"`
 	Alarm            string         `gorm:"not null;size:255"                           json:"alarm"`
@@ -44,7 +44,8 @@ func (a *Alarm) BeforeCreate(_ *gorm.DB) error {
 	return nil
 }
 
-// Incident is created when an alarm repeats itself, grouping related alarm occurrences.
+// Incident is created for every new unique alarm. It groups related occurrences
+// and owns the Ticket that tracks resolution work.
 type Incident struct {
 	ID               uuid.UUID      `gorm:"type:uuid;primaryKey"                        json:"id"`
 	IncidentNumber   string         `gorm:"not null;size:20;uniqueIndex"                json:"incident_number"`
@@ -68,24 +69,51 @@ func (i *Incident) BeforeCreate(_ *gorm.DB) error {
 	return nil
 }
 
+// Problem is created when the same alarm recurs after a previous incident has closed,
+// indicating a systemic issue that requires root-cause investigation.
+type Problem struct {
+	ID               uuid.UUID      `gorm:"type:uuid;primaryKey"                        json:"id"`
+	ProblemNumber    string         `gorm:"not null;size:20;uniqueIndex"                json:"problem_number"`
+	AlarmName        string         `gorm:"not null;size:255;index"                     json:"alarm_name"`
+	IncidentID       *uuid.UUID     `gorm:"type:uuid;index"                             json:"incident_id,omitempty"`
+	SourceIncident   *Incident      `gorm:"foreignKey:IncidentID"                       json:"source_incident,omitempty"`
+	Hyperlink        string         `gorm:"size:500"                                    json:"hyperlink"`
+	Description      string         `gorm:"not null;size:1000"                          json:"description"`
+	Status           TicketStatus   `gorm:"type:varchar(20);not null;default:'Open'"    json:"status"`
+	SubmitDate       time.Time      `gorm:"not null;autoCreateTime"                     json:"submit_date"`
+	LastModifiedDate time.Time      `gorm:"not null;autoUpdateTime"                     json:"last_modified_date"`
+	CloseDate        *time.Time     `                                                   json:"close_date,omitempty"`
+	Priority         TicketPriority `gorm:"type:varchar(10);not null"                   json:"priority"`
+	AssignedGroup    string         `gorm:"size:255"                                    json:"assigned_group"`
+	AssignedPerson   string         `gorm:"size:255"                                    json:"assigned_person"`
+	OccurrenceCount  int            `gorm:"not null;default:1"                          json:"occurrence_count"`
+}
+
+func (p *Problem) BeforeCreate(_ *gorm.DB) error {
+	if p.ID == uuid.Nil {
+		p.ID = uuid.New()
+	}
+	return nil
+}
+
 // EventType describes what happened in a TicketUpdate entry.
 type EventType string
 
 const (
-	EventCreated         EventType = "created"
-	EventEscalated       EventType = "escalated"
-	EventStatusChanged   EventType = "status_changed"
-	EventIncidentCreated EventType = "incident_created"
-	EventClosed          EventType = "closed"
+	EventCreated        EventType = "created"
+	EventEscalated      EventType = "escalated"
+	EventStatusChanged  EventType = "status_changed"
+	EventProblemCreated EventType = "problem_created"
+	EventClosed         EventType = "closed"
 )
 
-// Ticket is created automatically when an alarm fires and acts as its living document.
+// Ticket is created automatically when an incident is raised and acts as its living document.
 // All state changes are recorded in the Updates audit log.
 type Ticket struct {
 	ID               uuid.UUID      `gorm:"type:uuid;primaryKey"                        json:"id"`
 	TicketNumber     string         `gorm:"not null;size:20;uniqueIndex"                json:"ticket_number"`
-	AlarmID          uuid.UUID      `gorm:"type:uuid;not null;uniqueIndex"              json:"alarm_id"`
-	SourceAlarm      *Alarm         `gorm:"foreignKey:AlarmID"                          json:"source_alarm,omitempty"`
+	IncidentID       uuid.UUID      `gorm:"type:uuid;not null;uniqueIndex"              json:"incident_id"`
+	SourceIncident   *Incident      `gorm:"foreignKey:IncidentID"                       json:"source_incident,omitempty"`
 	Title            string         `gorm:"not null;size:255"                           json:"title"`
 	Status           TicketStatus   `gorm:"type:varchar(20);not null;default:'Open'"    json:"status"`
 	Priority         TicketPriority `gorm:"type:varchar(10);not null"                   json:"priority"`

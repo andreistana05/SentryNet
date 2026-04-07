@@ -27,6 +27,7 @@ func NewServices(repos *repository.Repositories, _ *redis.Client, cfg *config.Co
 	alarmSvc := newAlarmService(
 		repos.Alarm,
 		repos.Incident,
+		repos.Problem,
 		repos.Device,
 		repos.Ticket,
 		cfg.OfflineCheckInterval,

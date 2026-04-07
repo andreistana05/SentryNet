@@ -140,6 +140,81 @@ func (r *incidentRepository) NextIncidentNumber() (string, error) {
 	return fmt.Sprintf("INC%04d", count+1), nil
 }
 
+// ---- Problem Repository ----
+
+type problemRepository struct {
+	db *gorm.DB
+}
+
+func newProblemRepository(db *gorm.DB) ProblemRepository {
+	return &problemRepository{db: db}
+}
+
+func (r *problemRepository) Create(problem *models.Problem) error {
+	return r.db.Create(problem).Error
+}
+
+func (r *problemRepository) FindAll(filter ProblemFilter) ([]models.Problem, error) {
+	var problems []models.Problem
+	q := r.db.Preload("SourceIncident")
+
+	if filter.Status != "" {
+		q = q.Where("status = ?", filter.Status)
+	}
+	if filter.Priority != "" {
+		q = q.Where("priority = ?", filter.Priority)
+	}
+	if filter.AlarmName != "" {
+		q = q.Where("alarm_name = ?", filter.AlarmName)
+	}
+	if filter.Limit > 0 {
+		q = q.Limit(filter.Limit)
+	}
+	if filter.Offset > 0 {
+		q = q.Offset(filter.Offset)
+	}
+
+	if err := q.Order("submit_date DESC").Find(&problems).Error; err != nil {
+		return nil, err
+	}
+	return problems, nil
+}
+
+func (r *problemRepository) FindByID(id uuid.UUID) (*models.Problem, error) {
+	var problem models.Problem
+	if err := r.db.Preload("SourceIncident").First(&problem, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &problem, nil
+}
+
+func (r *problemRepository) FindOpenByAlarmName(alarmName string) (*models.Problem, error) {
+	var problem models.Problem
+	err := r.db.Where("alarm_name = ? AND status != ?", alarmName, models.StatusClosed).
+		Order("submit_date DESC").
+		First(&problem).Error
+	if err != nil {
+		return nil, err
+	}
+	return &problem, nil
+}
+
+func (r *problemRepository) Update(problem *models.Problem) error {
+	return r.db.Save(problem).Error
+}
+
+func (r *problemRepository) Delete(id uuid.UUID) error {
+	return r.db.Delete(&models.Problem{}, "id = ?", id).Error
+}
+
+func (r *problemRepository) NextProblemNumber() (string, error) {
+	var count int64
+	if err := r.db.Model(&models.Problem{}).Count(&count).Error; err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("PRB%04d", count+1), nil
+}
+
 // ---- Ticket Repository ----
 
 type ticketRepository struct {
@@ -161,8 +236,8 @@ func (r *ticketRepository) FindAll(filter TicketFilter) ([]models.Ticket, error)
 			return db.Order("timestamp ASC")
 		})
 
-	if filter.AlarmID != nil {
-		q = q.Where("alarm_id = ?", filter.AlarmID)
+	if filter.IncidentID != nil {
+		q = q.Where("incident_id = ?", filter.IncidentID)
 	}
 	if filter.Status != "" {
 		q = q.Where("status = ?", filter.Status)
@@ -194,11 +269,11 @@ func (r *ticketRepository) FindByID(id uuid.UUID) (*models.Ticket, error) {
 	return &ticket, nil
 }
 
-func (r *ticketRepository) FindByAlarmID(alarmID uuid.UUID) (*models.Ticket, error) {
+func (r *ticketRepository) FindByIncidentID(incidentID uuid.UUID) (*models.Ticket, error) {
 	var ticket models.Ticket
 	err := r.db.Preload("Updates", func(db *gorm.DB) *gorm.DB {
 		return db.Order("timestamp ASC")
-	}).First(&ticket, "alarm_id = ?", alarmID).Error
+	}).First(&ticket, "incident_id = ?", incidentID).Error
 	if err != nil {
 		return nil, err
 	}
