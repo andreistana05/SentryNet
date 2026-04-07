@@ -1,4 +1,61 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap");
+
+:root {
+  color-scheme: dark;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --bg-base: #07111f;
+  --bg-elevated: rgba(10, 21, 39, 0.72);
+  --bg-panel: rgba(10, 21, 39, 0.84);
+  --bg-soft: rgba(148, 163, 184, 0.08);
+  --line-soft: rgba(148, 163, 184, 0.16);
+  --line-strong: rgba(125, 211, 252, 0.24);
+  --text-primary: #f8fbff;
+  --text-secondary: #9fb1c9;
+  --text-muted: #7487a3;
+  --cyan: #67e8f9;
+  --cyan-deep: #0891b2;
+  --green: #4ade80;
+  --amber: #fbbf24;
+  --rose: #fb7185;
+  --shadow-xl: 0 30px 80px rgba(2, 8, 23, 0.45);
+  --radius-lg: 28px;
+  --radius-md: 20px;
+  --radius-sm: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at top left, rgba(103, 232, 249, 0.15), transparent 30%),
+    radial-gradient(circle at top right, rgba(251, 113, 133, 0.12), transparent 24%),
+    linear-gradient(180deg, #081221 0%, #050b14 100%);
+}
+
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  min-height: 100vh;
+  color: var(--text-primary);
+  background: transparent;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+#root {
+  min-height: 100vh;
 }
