@@ -19,9 +19,15 @@ function Dashboard() {
   const [devices, setDevices] = useState([]);
   const [overview, setOverview] = useState(null);
 
-  useEffect(() => {
+  const fetchData = () => {
     API.get("/status").then((r) => setOverview(r.data)).catch(console.error);
     API.get("/devices").then((r) => setDevices(r.data.data || [])).catch(console.error);
+  };
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const filteredDevices = useMemo(() => {
