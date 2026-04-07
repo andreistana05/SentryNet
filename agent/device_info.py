@@ -4,10 +4,18 @@ import platform
 
 def get_ip_address():
     try:
-        hostname = socket.gethostname()
-        return socket.gethostbyname(hostname)
+        # Connect to an external address (no data sent) to find the real outbound IP
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
     except Exception:
-        return "127.0.0.1"
+        try:
+            hostname = socket.gethostname()
+            return socket.gethostbyname(hostname)
+        except Exception:
+            return "127.0.0.1"
 
 
 def get_device_type():
