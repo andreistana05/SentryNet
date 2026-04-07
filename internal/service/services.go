@@ -28,6 +28,7 @@ func NewServices(repos *repository.Repositories, _ *redis.Client, cfg *config.Co
 		repos.Alarm,
 		repos.Incident,
 		repos.Device,
+		repos.Ticket,
 		cfg.OfflineCheckInterval,
 		cfg.HeartbeatTimeout,
 	)

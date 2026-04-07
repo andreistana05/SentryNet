@@ -1,25 +1,42 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import MetricCard from "../components/MetricCard";
 import DeviceTable from "../components/DeviceTable";
-import { mockDevices } from "../services/mockData";
+import API from "../services/api";
+
+function formatLastSeen(lastSeen) {
+  if (!lastSeen) return "Never";
+  const diff = Math.floor((Date.now() - new Date(lastSeen)) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  return `${Math.floor(diff / 3600)}h ago`;
+}
 
 function Dashboard() {
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [typeFilter, setTypeFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [devices, setDevices] = useState([]);
+  const [overview, setOverview] = useState(null);
+
+  useEffect(() => {
+    API.get("/status").then((r) => setOverview(r.data)).catch(console.error);
+    API.get("/devices").then((r) => setDevices(r.data.data || [])).catch(console.error);
+  }, []);
 
   const filteredDevices = useMemo(() => {
-    return mockDevices.filter((device) => {
-      const matchesStatus =
-        statusFilter === "All" || device.status === statusFilter;
-
-      const matchesType =
-        typeFilter === "All" || device.type === typeFilter;
-
+    return devices.filter((device) => {
+      const matchesStatus = statusFilter === "all" || device.status === statusFilter;
+      const matchesType = typeFilter === "all" || device.type === typeFilter;
       return matchesStatus && matchesType;
     });
-  }, [statusFilter, typeFilter]);
+  }, [devices, statusFilter, typeFilter]);
+
+  const tableDevices = filteredDevices.map((d) => ({
+    ...d,
+    ip: d.ip_address,
+    lastSeen: formatLastSeen(d.last_seen),
+  }));
 
   return (
     <div className="layout">
@@ -32,10 +49,10 @@ function Dashboard() {
           <h2>Infrastructure Overview</h2>
 
           <div className="metrics-grid">
-            <MetricCard title="Total Devices" value="42" unit="" />
-            <MetricCard title="Online Devices" value="37" unit="" />
-            <MetricCard title="Offline Devices" value="5" unit="" />
-            <MetricCard title="Active Alerts" value="3" unit="" />
+            <MetricCard title="Total Devices" value={overview?.devices?.total ?? "-"} unit="" />
+            <MetricCard title="Online Devices" value={overview?.devices?.online ?? "-"} unit="" />
+            <MetricCard title="Offline Devices" value={overview?.devices?.offline ?? "-"} unit="" />
+            <MetricCard title="Active Alerts" value={overview?.alarms?.open ?? "-"} unit="" />
           </div>
 
           <div className="filters-bar">
@@ -45,10 +62,10 @@ function Dashboard() {
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
-                <option value="All">All</option>
-                <option value="Online">Online</option>
-                <option value="Offline">Offline</option>
-                <option value="Warning">Warning</option>
+                <option value="all">All</option>
+                <option value="online">Online</option>
+                <option value="offline">Offline</option>
+                <option value="unknown">Unknown</option>
               </select>
             </div>
 
@@ -58,16 +75,16 @@ function Dashboard() {
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
               >
-                <option value="All">All</option>
-                <option value="Server">Server</option>
-                <option value="Workstation">Workstation</option>
-                <option value="Router">Router</option>
-                <option value="Printer">Printer</option>
+                <option value="all">All</option>
+                <option value="server">Server</option>
+                <option value="workstation">Workstation</option>
+                <option value="router">Router</option>
+                <option value="printer">Printer</option>
               </select>
             </div>
           </div>
 
-          <DeviceTable devices={filteredDevices} />
+          <DeviceTable devices={tableDevices} />
         </div>
       </div>
     </div>

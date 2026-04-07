@@ -122,6 +122,7 @@ type AlarmService struct {
 	alarms    repository.AlarmRepository
 	incidents repository.IncidentRepository
 	devices   repository.DeviceRepository
+	tickets   repository.TicketRepository
 	interval  time.Duration
 	timeout   time.Duration
 
@@ -135,6 +136,7 @@ func newAlarmService(
 	alarms repository.AlarmRepository,
 	incidents repository.IncidentRepository,
 	devices repository.DeviceRepository,
+	tickets repository.TicketRepository,
 	offlineCheckInterval time.Duration,
 	heartbeatTimeout time.Duration,
 ) *AlarmService {
@@ -142,6 +144,7 @@ func newAlarmService(
 		alarms:        alarms,
 		incidents:     incidents,
 		devices:       devices,
+		tickets:       tickets,
 		interval:      offlineCheckInterval,
 		timeout:       heartbeatTimeout,
 		breachTracker: make(map[string]*breachState),
@@ -234,10 +237,14 @@ func (s *AlarmService) createOrEscalate(name string, priority models.TicketPrior
 		if priorityRank(priority) > priorityRank(a.Priority) {
 			// Escalate to the higher priority.
 			log.Printf("alarm escalation: %s → %s (alarm %s)", a.Priority, priority, a.ID)
+			oldPriority := a.Priority
 			a.Priority = priority
 			if err := s.alarms.Update(a); err != nil {
 				log.Printf("alarm escalation: update failed: %v", err)
+				return
 			}
+			s.appendTicketUpdate(a.ID, models.EventEscalated,
+				fmt.Sprintf("Priority escalated from %s to %s", oldPriority, priority))
 			return
 		}
 
@@ -262,6 +269,7 @@ func (s *AlarmService) createOrEscalate(name string, priority models.TicketPrior
 	}
 	alarm.Hyperlink = fmt.Sprintf("/api/v1/alarms/%s", alarm.ID)
 	_ = s.alarms.Update(alarm)
+	s.createTicket(alarm)
 }
 
 // closeAlarmByName closes any open alarm whose name matches exactly.
@@ -278,7 +286,9 @@ func (s *AlarmService) closeAlarmByName(name string) {
 			a.CloseDate = &now
 			if err := s.alarms.Update(a); err != nil {
 				log.Printf("auto-close alarm: update failed: %v", err)
+				continue
 			}
+			s.syncTicketClosed(a.ID, now)
 		}
 	}
 }
@@ -306,6 +316,8 @@ func (s *AlarmService) createIncident(alarm *models.Alarm) {
 	}
 	incident.Hyperlink = fmt.Sprintf("/api/v1/incidents/%s", incident.ID)
 	_ = s.incidents.Update(incident)
+	s.appendTicketUpdate(alarm.ID, models.EventIncidentCreated,
+		fmt.Sprintf("Incident %s created due to recurring high-priority alarm", incident.IncidentNumber))
 }
 
 // CreateOfflineAlarm creates a "Device offline" alarm if one is not already active.
@@ -376,7 +388,11 @@ func (s *AlarmService) SetInProgress(id uuid.UUID) error {
 		return errors.New("alarm is not open")
 	}
 	alarm.Status = models.StatusInProgress
-	return s.alarms.Update(alarm)
+	if err := s.alarms.Update(alarm); err != nil {
+		return err
+	}
+	s.appendTicketUpdate(id, models.EventStatusChanged, "Status changed to In Progress")
+	return nil
 }
 
 func (s *AlarmService) Close(id uuid.UUID) error {
@@ -390,7 +406,11 @@ func (s *AlarmService) Close(id uuid.UUID) error {
 	now := time.Now()
 	alarm.Status = models.StatusClosed
 	alarm.CloseDate = &now
-	return s.alarms.Update(alarm)
+	if err := s.alarms.Update(alarm); err != nil {
+		return err
+	}
+	s.syncTicketClosed(id, now)
+	return nil
 }
 
 // ---- Incident management ----
@@ -422,4 +442,91 @@ func (s *AlarmService) CloseIncident(id uuid.UUID) error {
 	incident.Status = models.StatusClosed
 	incident.CloseDate = &now
 	return s.incidents.Update(incident)
+}
+
+// ---- Ticket management ----
+
+func (s *AlarmService) ListTickets(filter repository.TicketFilter) ([]models.Ticket, error) {
+	return s.tickets.FindAll(filter)
+}
+
+func (s *AlarmService) GetTicket(id uuid.UUID) (*models.Ticket, error) {
+	ticket, err := s.tickets.FindByID(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return ticket, nil
+}
+
+// createTicket opens a new Ticket document for the given alarm.
+func (s *AlarmService) createTicket(alarm *models.Alarm) {
+	ticketNumber, err := s.tickets.NextTicketNumber()
+	if err != nil {
+		log.Printf("ticket creation: NextTicketNumber: %v", err)
+		return
+	}
+	ticket := &models.Ticket{
+		TicketNumber:  ticketNumber,
+		AlarmID:       alarm.ID,
+		Title:         alarm.Alarm,
+		Status:        models.StatusOpen,
+		Priority:      alarm.Priority,
+		AssignedGroup: alarm.AssignedGroup,
+	}
+	if err := s.tickets.Create(ticket); err != nil {
+		log.Printf("ticket creation: failed: %v", err)
+		return
+	}
+	update := &models.TicketUpdate{
+		TicketID:    ticket.ID,
+		EventType:   models.EventCreated,
+		Description: fmt.Sprintf("Alarm created with priority %s", alarm.Priority),
+	}
+	if err := s.tickets.AddUpdate(update); err != nil {
+		log.Printf("ticket creation: AddUpdate: %v", err)
+	}
+}
+
+// appendTicketUpdate looks up the ticket for the given alarm and appends an audit entry.
+// Failures are logged but do not affect the calling operation.
+func (s *AlarmService) appendTicketUpdate(alarmID uuid.UUID, event models.EventType, description string) {
+	ticket, err := s.tickets.FindByAlarmID(alarmID)
+	if err != nil {
+		log.Printf("ticket update: FindByAlarmID(%s): %v", alarmID, err)
+		return
+	}
+	u := &models.TicketUpdate{
+		TicketID:    ticket.ID,
+		EventType:   event,
+		Description: description,
+	}
+	if err := s.tickets.AddUpdate(u); err != nil {
+		log.Printf("ticket update: AddUpdate: %v", err)
+	}
+}
+
+// syncTicketClosed marks the ticket closed and appends a closed audit entry.
+func (s *AlarmService) syncTicketClosed(alarmID uuid.UUID, closedAt time.Time) {
+	ticket, err := s.tickets.FindByAlarmID(alarmID)
+	if err != nil {
+		log.Printf("ticket close: FindByAlarmID(%s): %v", alarmID, err)
+		return
+	}
+	ticket.Status = models.StatusClosed
+	ticket.CloseDate = &closedAt
+	if err := s.tickets.Update(ticket); err != nil {
+		log.Printf("ticket close: Update: %v", err)
+		return
+	}
+	u := &models.TicketUpdate{
+		TicketID:    ticket.ID,
+		EventType:   models.EventClosed,
+		Description: "Alarm closed",
+	}
+	if err := s.tickets.AddUpdate(u); err != nil {
+		log.Printf("ticket close: AddUpdate: %v", err)
+	}
 }

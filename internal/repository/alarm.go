@@ -139,3 +139,84 @@ func (r *incidentRepository) NextIncidentNumber() (string, error) {
 	}
 	return fmt.Sprintf("INC%04d", count+1), nil
 }
+
+// ---- Ticket Repository ----
+
+type ticketRepository struct {
+	db *gorm.DB
+}
+
+func newTicketRepository(db *gorm.DB) TicketRepository {
+	return &ticketRepository{db: db}
+}
+
+func (r *ticketRepository) Create(ticket *models.Ticket) error {
+	return r.db.Create(ticket).Error
+}
+
+func (r *ticketRepository) FindAll(filter TicketFilter) ([]models.Ticket, error) {
+	var tickets []models.Ticket
+	q := r.db.Model(&models.Ticket{}).
+		Preload("Updates", func(db *gorm.DB) *gorm.DB {
+			return db.Order("timestamp ASC")
+		})
+
+	if filter.AlarmID != nil {
+		q = q.Where("alarm_id = ?", filter.AlarmID)
+	}
+	if filter.Status != "" {
+		q = q.Where("status = ?", filter.Status)
+	}
+	if filter.Priority != "" {
+		q = q.Where("priority = ?", filter.Priority)
+	}
+	if filter.Limit > 0 {
+		q = q.Limit(filter.Limit)
+	}
+	if filter.Offset > 0 {
+		q = q.Offset(filter.Offset)
+	}
+
+	if err := q.Order("submit_date DESC").Find(&tickets).Error; err != nil {
+		return nil, err
+	}
+	return tickets, nil
+}
+
+func (r *ticketRepository) FindByID(id uuid.UUID) (*models.Ticket, error) {
+	var ticket models.Ticket
+	err := r.db.Preload("Updates", func(db *gorm.DB) *gorm.DB {
+		return db.Order("timestamp ASC")
+	}).First(&ticket, "id = ?", id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &ticket, nil
+}
+
+func (r *ticketRepository) FindByAlarmID(alarmID uuid.UUID) (*models.Ticket, error) {
+	var ticket models.Ticket
+	err := r.db.Preload("Updates", func(db *gorm.DB) *gorm.DB {
+		return db.Order("timestamp ASC")
+	}).First(&ticket, "alarm_id = ?", alarmID).Error
+	if err != nil {
+		return nil, err
+	}
+	return &ticket, nil
+}
+
+func (r *ticketRepository) Update(ticket *models.Ticket) error {
+	return r.db.Save(ticket).Error
+}
+
+func (r *ticketRepository) AddUpdate(update *models.TicketUpdate) error {
+	return r.db.Create(update).Error
+}
+
+func (r *ticketRepository) NextTicketNumber() (string, error) {
+	var count int64
+	if err := r.db.Model(&models.Ticket{}).Count(&count).Error; err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("TKT%04d", count+1), nil
+}

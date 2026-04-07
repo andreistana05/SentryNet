@@ -79,3 +79,32 @@ CREATE TABLE IF NOT EXISTS incidents (
 
 CREATE INDEX IF NOT EXISTS idx_incidents_alarm_id ON incidents(alarm_id);
 CREATE INDEX IF NOT EXISTS idx_incidents_status   ON incidents(status);
+
+-- tickets: one per alarm, serves as the living document for an alarm's lifecycle.
+CREATE TABLE IF NOT EXISTS tickets (
+    id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    ticket_number      VARCHAR(20)   NOT NULL UNIQUE,
+    alarm_id           UUID          NOT NULL UNIQUE REFERENCES alarms(id) ON DELETE CASCADE,
+    title              VARCHAR(255)  NOT NULL,
+    status             VARCHAR(20)   NOT NULL DEFAULT 'Open',
+    priority           VARCHAR(10)   NOT NULL,
+    assigned_group     VARCHAR(255),
+    assigned_person    VARCHAR(255),
+    submit_date        TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    last_modified_date TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    close_date         TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_tickets_status   ON tickets(status);
+CREATE INDEX IF NOT EXISTS idx_tickets_priority ON tickets(priority);
+
+-- ticket_updates: append-only audit log for every state change on a ticket.
+CREATE TABLE IF NOT EXISTS ticket_updates (
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    ticket_id   UUID         NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+    event_type  VARCHAR(30)  NOT NULL,
+    description VARCHAR(500) NOT NULL,
+    timestamp   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ticket_updates_ticket_id ON ticket_updates(ticket_id);

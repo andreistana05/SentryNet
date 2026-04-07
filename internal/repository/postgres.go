@@ -36,6 +36,8 @@ func Migrate(db *gorm.DB) error {
 		&models.Metric{},
 		&models.Alarm{},
 		&models.Incident{},
+		&models.Ticket{},
+		&models.TicketUpdate{},
 	)
 }
 
@@ -46,6 +48,7 @@ type Repositories struct {
 	Metric   MetricRepository
 	Alarm    AlarmRepository
 	Incident IncidentRepository
+	Ticket   TicketRepository
 }
 
 func NewRepositories(db *gorm.DB) *Repositories {
@@ -55,5 +58,6 @@ func NewRepositories(db *gorm.DB) *Repositories {
 		Metric:   newMetricRepository(db),
 		Alarm:    newAlarmRepository(db),
 		Incident: newIncidentRepository(db),
+		Ticket:   newTicketRepository(db),
 	}
 }

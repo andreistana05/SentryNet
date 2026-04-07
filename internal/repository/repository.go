@@ -89,3 +89,23 @@ type IncidentRepository interface {
 	Delete(id uuid.UUID) error
 	NextIncidentNumber() (string, error)
 }
+
+// TicketFilter holds optional filters for querying tickets.
+type TicketFilter struct {
+	AlarmID  *uuid.UUID
+	Status   models.TicketStatus
+	Priority models.TicketPriority
+	Limit    int
+	Offset   int
+}
+
+// TicketRepository defines operations on tickets and their audit updates.
+type TicketRepository interface {
+	Create(ticket *models.Ticket) error
+	FindAll(filter TicketFilter) ([]models.Ticket, error)
+	FindByID(id uuid.UUID) (*models.Ticket, error)
+	FindByAlarmID(alarmID uuid.UUID) (*models.Ticket, error)
+	Update(ticket *models.Ticket) error
+	AddUpdate(update *models.TicketUpdate) error
+	NextTicketNumber() (string, error)
+}
