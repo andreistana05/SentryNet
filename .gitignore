@@ -38,3 +38,5 @@ config.json
 
 # Temporary files
 *.tmp
+
+.github/
