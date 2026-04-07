@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import PrivateRoute from "./components/PrivateRoute";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
+import MetricsPage from "./pages/MetricsPage";
 import OperationsPage from "./pages/OperationsPage";
 import Register from "./pages/Register";
 import "./styles/dashboard.css";
@@ -17,6 +18,14 @@ function App() {
           element={
             <PrivateRoute>
               <Dashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dashboard/metrics"
+          element={
+            <PrivateRoute>
+              <MetricsPage />
             </PrivateRoute>
           }
         />

@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 function Sidebar({ totalDevices, onlineDevices, activeAlerts, openTickets, openProblems }) {
   const links = [
     { label: "Overview", to: "/dashboard" },
+    { label: "Metrics", to: "/dashboard/metrics" },
     { label: "Alarms", to: "/dashboard/alarms" },
     { label: "Incidents", to: "/dashboard/incidents" },
     { label: "Tickets", to: "/dashboard/tickets" },

@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 function DeviceTable({ devices, loading, error, totalDevices, filteredCount }) {
   const hasDevices = devices.length > 0;
 
@@ -41,6 +43,7 @@ function DeviceTable({ devices, loading, error, totalDevices, filteredCount }) {
                 <th>IP Address</th>
                 <th>Status</th>
                 <th>Last Seen</th>
+                <th>Metrics</th>
               </tr>
             </thead>
 
@@ -61,6 +64,11 @@ function DeviceTable({ devices, loading, error, totalDevices, filteredCount }) {
                     </span>
                   </td>
                   <td>{device.lastSeen}</td>
+                  <td>
+                    <Link className="table-action-link" to={`/dashboard/metrics?device=${device.id}`}>
+                      View metrics
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>
