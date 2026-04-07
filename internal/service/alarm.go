@@ -252,7 +252,13 @@ func (s *AlarmService) createOrEscalate(name string, priority models.TicketPrior
 	}
 
 	// No active alarm found — create a new one.
+	alarmNumber, err := s.alarms.NextAlarmNumber()
+	if err != nil {
+		log.Printf("alarm evaluation: NextAlarmNumber: %v", err)
+		return
+	}
 	alarm := &models.Alarm{
+		AlarmNumber:   alarmNumber,
 		Alarm:         name,
 		Status:        models.StatusOpen,
 		Priority:      priority,
@@ -520,6 +526,17 @@ func (s *AlarmService) Get(id uuid.UUID) (*models.Alarm, error) {
 	return alarm, nil
 }
 
+func (s *AlarmService) GetByNumber(number string) (*models.Alarm, error) {
+	alarm, err := s.alarms.FindByNumber(number)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return alarm, nil
+}
+
 func (s *AlarmService) SetInProgress(id uuid.UUID) error {
 	alarm, err := s.Get(id)
 	if err != nil {
@@ -567,6 +584,17 @@ func (s *AlarmService) GetIncident(id uuid.UUID) (*models.Incident, error) {
 	return incident, nil
 }
 
+func (s *AlarmService) GetIncidentByNumber(number string) (*models.Incident, error) {
+	incident, err := s.incidents.FindByNumber(number)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return incident, nil
+}
+
 func (s *AlarmService) CloseIncident(id uuid.UUID) error {
 	incident, err := s.GetIncident(id)
 	if err != nil {
@@ -602,6 +630,17 @@ func (s *AlarmService) GetProblem(id uuid.UUID) (*models.Problem, error) {
 	return problem, nil
 }
 
+func (s *AlarmService) GetProblemByNumber(number string) (*models.Problem, error) {
+	problem, err := s.problems.FindByNumber(number)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return problem, nil
+}
+
 func (s *AlarmService) CloseProblem(id uuid.UUID) error {
 	problem, err := s.GetProblem(id)
 	if err != nil {
@@ -624,6 +663,17 @@ func (s *AlarmService) ListTickets(filter repository.TicketFilter) ([]models.Tic
 
 func (s *AlarmService) GetTicket(id uuid.UUID) (*models.Ticket, error) {
 	ticket, err := s.tickets.FindByID(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return ticket, nil
+}
+
+func (s *AlarmService) GetTicketByNumber(number string) (*models.Ticket, error) {
+	ticket, err := s.tickets.FindByNumber(number)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrNotFound

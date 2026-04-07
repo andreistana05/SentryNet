@@ -248,7 +248,7 @@ function normalizeMetricDictionary(source) {
 
   if (Array.isArray(source)) {
     return source.reduce((accumulator, metric) => {
-      const rawKey = metric?.key || metric?.name || metric?.metric;
+      const rawKey = metric?.key || metric?.name || metric?.metric || metric?.type;
       if (!rawKey) return accumulator;
 
       accumulator[slugify(rawKey)] = {
@@ -281,6 +281,7 @@ function getMetricSources(device, metricsPayload) {
   return [
     metricsPayload?.metrics,
     metricsPayload?.telemetry,
+    metricsPayload?.data,
     metricsPayload?.data?.metrics,
     metricsPayload?.data?.telemetry,
     metricsPayload,

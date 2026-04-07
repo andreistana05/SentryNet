@@ -27,6 +27,7 @@ func (h *AlarmHandler) ListAlarms(c *gin.Context) {
 	filter := repository.AlarmFilter{
 		Status:   models.TicketStatus(c.Query("status")),
 		Priority: models.TicketPriority(c.Query("priority")),
+		Search:   c.Query("search"),
 		Limit:    100,
 	}
 	if limitStr := c.Query("limit"); limitStr != "" {
@@ -49,15 +50,24 @@ func (h *AlarmHandler) ListAlarms(c *gin.Context) {
 }
 
 // GetAlarm godoc
-// GET /api/v1/alarms/:id
+// GET /api/v1/alarms/:id  (accepts UUID or alarm number e.g. ALM0001)
 func (h *AlarmHandler) GetAlarm(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid alarm ID"})
+	raw := c.Param("id")
+	if id, err := uuid.Parse(raw); err == nil {
+		alarm, err := h.svc.Get(id)
+		if err != nil {
+			if errors.Is(err, service.ErrNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "alarm not found"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, alarm)
 		return
 	}
-
-	alarm, err := h.svc.Get(id)
+	// Try human-readable number (e.g. ALM0001)
+	alarm, err := h.svc.GetByNumber(raw)
 	if err != nil {
 		if errors.Is(err, service.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "alarm not found"})
@@ -115,6 +125,7 @@ func (h *AlarmHandler) ListIncidents(c *gin.Context) {
 	filter := repository.IncidentFilter{
 		Status:   models.TicketStatus(c.Query("status")),
 		Priority: models.TicketPriority(c.Query("priority")),
+		Search:   c.Query("search"),
 		Limit:    100,
 	}
 	if limitStr := c.Query("limit"); limitStr != "" {
@@ -137,15 +148,23 @@ func (h *AlarmHandler) ListIncidents(c *gin.Context) {
 }
 
 // GetIncident godoc
-// GET /api/v1/incidents/:id
+// GET /api/v1/incidents/:id  (accepts UUID or incident number e.g. INC0001)
 func (h *AlarmHandler) GetIncident(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid incident ID"})
+	raw := c.Param("id")
+	if id, err := uuid.Parse(raw); err == nil {
+		incident, err := h.svc.GetIncident(id)
+		if err != nil {
+			if errors.Is(err, service.ErrNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "incident not found"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, incident)
 		return
 	}
-
-	incident, err := h.svc.GetIncident(id)
+	incident, err := h.svc.GetIncidentByNumber(raw)
 	if err != nil {
 		if errors.Is(err, service.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "incident not found"})
@@ -184,6 +203,7 @@ func (h *AlarmHandler) ListProblems(c *gin.Context) {
 		Status:    models.TicketStatus(c.Query("status")),
 		Priority:  models.TicketPriority(c.Query("priority")),
 		AlarmName: c.Query("alarm_name"),
+		Search:    c.Query("search"),
 		Limit:     100,
 	}
 	if limitStr := c.Query("limit"); limitStr != "" {
@@ -206,15 +226,23 @@ func (h *AlarmHandler) ListProblems(c *gin.Context) {
 }
 
 // GetProblem godoc
-// GET /api/v1/problems/:id
+// GET /api/v1/problems/:id  (accepts UUID or problem number e.g. PRB0001)
 func (h *AlarmHandler) GetProblem(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid problem ID"})
+	raw := c.Param("id")
+	if id, err := uuid.Parse(raw); err == nil {
+		problem, err := h.svc.GetProblem(id)
+		if err != nil {
+			if errors.Is(err, service.ErrNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "problem not found"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, problem)
 		return
 	}
-
-	problem, err := h.svc.GetProblem(id)
+	problem, err := h.svc.GetProblemByNumber(raw)
 	if err != nil {
 		if errors.Is(err, service.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "problem not found"})
@@ -252,6 +280,7 @@ func (h *AlarmHandler) ListTickets(c *gin.Context) {
 	filter := repository.TicketFilter{
 		Status:   models.TicketStatus(c.Query("status")),
 		Priority: models.TicketPriority(c.Query("priority")),
+		Search:   c.Query("search"),
 		Limit:    100,
 	}
 	if limitStr := c.Query("limit"); limitStr != "" {
@@ -274,15 +303,23 @@ func (h *AlarmHandler) ListTickets(c *gin.Context) {
 }
 
 // GetTicket godoc
-// GET /api/v1/tickets/:id
+// GET /api/v1/tickets/:id  (accepts UUID or ticket number e.g. TKT0001)
 func (h *AlarmHandler) GetTicket(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ticket ID"})
+	raw := c.Param("id")
+	if id, err := uuid.Parse(raw); err == nil {
+		ticket, err := h.svc.GetTicket(id)
+		if err != nil {
+			if errors.Is(err, service.ErrNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "ticket not found"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, ticket)
 		return
 	}
-
-	ticket, err := h.svc.GetTicket(id)
+	ticket, err := h.svc.GetTicketByNumber(raw)
 	if err != nil {
 		if errors.Is(err, service.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "ticket not found"})

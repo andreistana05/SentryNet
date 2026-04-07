@@ -33,6 +33,9 @@ func (r *alarmRepository) FindAll(filter AlarmFilter) ([]models.Alarm, error) {
 	if filter.Priority != "" {
 		q = q.Where("priority = ?", filter.Priority)
 	}
+	if filter.Search != "" {
+		q = q.Where("alarm_number ILIKE ?", "%"+filter.Search+"%")
+	}
 	if filter.Limit > 0 {
 		q = q.Limit(filter.Limit)
 	}
@@ -52,6 +55,22 @@ func (r *alarmRepository) FindByID(id uuid.UUID) (*models.Alarm, error) {
 		return nil, err
 	}
 	return &alarm, nil
+}
+
+func (r *alarmRepository) FindByNumber(number string) (*models.Alarm, error) {
+	var alarm models.Alarm
+	if err := r.db.First(&alarm, "alarm_number = ?", number).Error; err != nil {
+		return nil, err
+	}
+	return &alarm, nil
+}
+
+func (r *alarmRepository) NextAlarmNumber() (string, error) {
+	var count int64
+	if err := r.db.Model(&models.Alarm{}).Count(&count).Error; err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("ALM%04d", count+1), nil
 }
 
 func (r *alarmRepository) Update(alarm *models.Alarm) error {
@@ -95,6 +114,9 @@ func (r *incidentRepository) FindAll(filter IncidentFilter) ([]models.Incident, 
 	if filter.AlarmID != nil {
 		q = q.Where("alarm_id = ?", filter.AlarmID)
 	}
+	if filter.Search != "" {
+		q = q.Where("incident_number ILIKE ?", "%"+filter.Search+"%")
+	}
 	if filter.Limit > 0 {
 		q = q.Limit(filter.Limit)
 	}
@@ -111,6 +133,14 @@ func (r *incidentRepository) FindAll(filter IncidentFilter) ([]models.Incident, 
 func (r *incidentRepository) FindByID(id uuid.UUID) (*models.Incident, error) {
 	var incident models.Incident
 	if err := r.db.Preload("SourceAlarm").First(&incident, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &incident, nil
+}
+
+func (r *incidentRepository) FindByNumber(number string) (*models.Incident, error) {
+	var incident models.Incident
+	if err := r.db.Preload("SourceAlarm").First(&incident, "incident_number = ?", number).Error; err != nil {
 		return nil, err
 	}
 	return &incident, nil
@@ -167,6 +197,9 @@ func (r *problemRepository) FindAll(filter ProblemFilter) ([]models.Problem, err
 	if filter.AlarmName != "" {
 		q = q.Where("alarm_name = ?", filter.AlarmName)
 	}
+	if filter.Search != "" {
+		q = q.Where("problem_number ILIKE ?", "%"+filter.Search+"%")
+	}
 	if filter.Limit > 0 {
 		q = q.Limit(filter.Limit)
 	}
@@ -183,6 +216,14 @@ func (r *problemRepository) FindAll(filter ProblemFilter) ([]models.Problem, err
 func (r *problemRepository) FindByID(id uuid.UUID) (*models.Problem, error) {
 	var problem models.Problem
 	if err := r.db.Preload("SourceIncident").First(&problem, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &problem, nil
+}
+
+func (r *problemRepository) FindByNumber(number string) (*models.Problem, error) {
+	var problem models.Problem
+	if err := r.db.Preload("SourceIncident").First(&problem, "problem_number = ?", number).Error; err != nil {
 		return nil, err
 	}
 	return &problem, nil
@@ -245,6 +286,9 @@ func (r *ticketRepository) FindAll(filter TicketFilter) ([]models.Ticket, error)
 	if filter.Priority != "" {
 		q = q.Where("priority = ?", filter.Priority)
 	}
+	if filter.Search != "" {
+		q = q.Where("ticket_number ILIKE ?", "%"+filter.Search+"%")
+	}
 	if filter.Limit > 0 {
 		q = q.Limit(filter.Limit)
 	}
@@ -263,6 +307,17 @@ func (r *ticketRepository) FindByID(id uuid.UUID) (*models.Ticket, error) {
 	err := r.db.Preload("Updates", func(db *gorm.DB) *gorm.DB {
 		return db.Order("timestamp ASC")
 	}).First(&ticket, "id = ?", id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &ticket, nil
+}
+
+func (r *ticketRepository) FindByNumber(number string) (*models.Ticket, error) {
+	var ticket models.Ticket
+	err := r.db.Preload("Updates", func(db *gorm.DB) *gorm.DB {
+		return db.Order("timestamp ASC")
+	}).First(&ticket, "ticket_number = ?", number).Error
 	if err != nil {
 		return nil, err
 	}

@@ -41,7 +41,7 @@ func (r *metricRepository) FindByDevice(deviceID uuid.UUID, filter MetricFilter)
 func (r *metricRepository) FindLatestByDevice(deviceID uuid.UUID) ([]models.Metric, error) {
 	var metrics []models.Metric
 	subQuery := r.db.Model(&models.Metric{}).
-		Select("MAX(timestamp) as max_ts, type").
+		Select("type, MAX(timestamp) as max_ts").
 		Where("device_id = ?", deviceID).
 		Group("type")
 

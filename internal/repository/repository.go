@@ -56,6 +56,7 @@ type MetricRepository interface {
 type AlarmFilter struct {
 	Status   models.TicketStatus
 	Priority models.TicketPriority
+	Search   string // matches alarm_number
 	Limit    int
 	Offset   int
 }
@@ -65,9 +66,11 @@ type AlarmRepository interface {
 	Create(alarm *models.Alarm) error
 	FindAll(filter AlarmFilter) ([]models.Alarm, error)
 	FindByID(id uuid.UUID) (*models.Alarm, error)
+	FindByNumber(number string) (*models.Alarm, error)
 	Update(alarm *models.Alarm) error
 	Delete(id uuid.UUID) error
 	CountByStatus(status models.TicketStatus) (int64, error)
+	NextAlarmNumber() (string, error)
 }
 
 // IncidentFilter holds optional filters for querying incidents.
@@ -75,6 +78,7 @@ type IncidentFilter struct {
 	AlarmID  *uuid.UUID
 	Status   models.TicketStatus
 	Priority models.TicketPriority
+	Search   string // matches incident_number
 	Limit    int
 	Offset   int
 }
@@ -84,6 +88,7 @@ type IncidentRepository interface {
 	Create(incident *models.Incident) error
 	FindAll(filter IncidentFilter) ([]models.Incident, error)
 	FindByID(id uuid.UUID) (*models.Incident, error)
+	FindByNumber(number string) (*models.Incident, error)
 	FindByAlarm(alarmID uuid.UUID) ([]models.Incident, error)
 	Update(incident *models.Incident) error
 	Delete(id uuid.UUID) error
@@ -95,6 +100,7 @@ type ProblemFilter struct {
 	Status    models.TicketStatus
 	Priority  models.TicketPriority
 	AlarmName string
+	Search    string // matches problem_number
 	Limit     int
 	Offset    int
 }
@@ -104,6 +110,7 @@ type ProblemRepository interface {
 	Create(problem *models.Problem) error
 	FindAll(filter ProblemFilter) ([]models.Problem, error)
 	FindByID(id uuid.UUID) (*models.Problem, error)
+	FindByNumber(number string) (*models.Problem, error)
 	FindOpenByAlarmName(alarmName string) (*models.Problem, error)
 	Update(problem *models.Problem) error
 	Delete(id uuid.UUID) error
@@ -115,6 +122,7 @@ type TicketFilter struct {
 	IncidentID *uuid.UUID
 	Status     models.TicketStatus
 	Priority   models.TicketPriority
+	Search     string // matches ticket_number
 	Limit      int
 	Offset     int
 }
@@ -124,6 +132,7 @@ type TicketRepository interface {
 	Create(ticket *models.Ticket) error
 	FindAll(filter TicketFilter) ([]models.Ticket, error)
 	FindByID(id uuid.UUID) (*models.Ticket, error)
+	FindByNumber(number string) (*models.Ticket, error)
 	FindByIncidentID(incidentID uuid.UUID) (*models.Ticket, error)
 	Update(ticket *models.Ticket) error
 	AddUpdate(update *models.TicketUpdate) error
