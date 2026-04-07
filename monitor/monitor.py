@@ -1,15 +1,15 @@
 import time
+import socket
 import requests
 import subprocess
 import platform
 import ipaddress
 import os
-import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Configuration
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
-API_KEY = os.getenv("INGEST_API_KEY", "change-me-ingest-key")
+API_KEY = os.getenv("INGEST_API_KEY", "sk-infrapulse-7f3Kx9mQpL2wNvR8dYcT4jZbHnUeA6sW")
 INTERVAL = int(os.getenv("MONITOR_INTERVAL", "30"))
 OFFLINE_THRESHOLD = int(os.getenv("OFFLINE_THRESHOLD", "3"))
 PING_COUNT = int(os.getenv("PING_COUNT", "1"))
@@ -17,20 +17,44 @@ PING_TIMEOUT = int(os.getenv("PING_TIMEOUT", "1"))
 NETWORK_RANGE = os.getenv("NETWORK_RANGE", "")
 DISCOVERY_INTERVAL = int(os.getenv("DISCOVERY_INTERVAL", "300"))  # re-scan every 5 min
 DISCOVERY_WORKERS = int(os.getenv("DISCOVERY_WORKERS", "50"))      # parallel ping workers
-DEVICES_FILE = os.path.join(os.path.dirname(__file__), "devices.json")
 
 
-def load_devices_from_file():
-    """Load devices from a JSON file (fallback)."""
+def resolve_hostname(ip):
+    """Reverse DNS lookup. Returns the hostname or the IP itself if unresolvable."""
     try:
-        with open(DEVICES_FILE, "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print(f"File {DEVICES_FILE} does not exist. Using default list.")
-        return [
-            {"hostname": "server1", "ip_address": "192.168.1.10", "type": "server"},
-            {"hostname": "router1", "ip_address": "192.168.1.1", "type": "router"},
-        ]
+        return socket.gethostbyaddr(ip)[0]
+    except Exception:
+        return ip
+
+
+def detect_device_type(ip):
+    """Probe well-known ports to guess device type.
+
+    Detection logic:
+      - Port 9100 open  → printer   (JetDirect / raw print)
+      - Port 23 open    → router    (Telnet management, almost exclusively network gear)
+      - Port 3389 open  → workstation (Windows RDP)
+      - Anything else   → server
+    """
+    probe_ports = [9100, 23, 3389]
+    open_ports = set()
+    for port in probe_ports:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(0.4)
+            if s.connect_ex((ip, port)) == 0:
+                open_ports.add(port)
+            s.close()
+        except Exception:
+            pass
+
+    if 9100 in open_ports:
+        return "printer"
+    if 23 in open_ports:
+        return "router"
+    if 3389 in open_ports:
+        return "workstation"
+    return "server"
 
 
 def _ping_once(ip):
@@ -45,30 +69,37 @@ def _ping_once(ip):
         return ip, False
 
 
+def _identify_device(ip):
+    """Ping, then resolve hostname and detect type for a single IP."""
+    _, alive = _ping_once(ip)
+    if not alive:
+        return None
+    hostname = resolve_hostname(ip)
+    device_type = detect_device_type(ip)
+    return {"hostname": hostname, "ip_address": ip, "type": device_type}
+
+
 def discover_devices(network_range):
-    """Ping-sweep the network in parallel and return responding hosts."""
+    """Ping-sweep + auto-identify all responding hosts on the network."""
     print(f"Scanning network: {network_range} ...")
     try:
         network = ipaddress.ip_network(network_range, strict=False)
-        hosts = [str(h) for h in network.hosts()]  # excludes network/broadcast
+        hosts = [str(h) for h in network.hosts()]
     except ValueError as e:
-        print(f"Invalid network range '{network_range}': {e}. Falling back to devices.json.")
-        return load_devices_from_file()
+        print(f"Invalid network range '{network_range}': {e}")
+        return []
 
     alive = []
     with ThreadPoolExecutor(max_workers=DISCOVERY_WORKERS) as ex:
-        futures = {ex.submit(_ping_once, ip): ip for ip in hosts}
+        futures = {ex.submit(_identify_device, ip): ip for ip in hosts}
         for future in as_completed(futures):
-            ip, is_up = future.result()
-            if is_up:
-                alive.append({"hostname": ip, "ip_address": ip, "type": "server"})
+            result = future.result()
+            if result:
+                alive.append(result)
 
     alive.sort(key=lambda d: ipaddress.ip_address(d["ip_address"]))
     print(f"Discovery found {len(alive)} device(s): {[d['ip_address'] for d in alive]}")
     return alive
-
-
-load_devices = load_devices_from_file  # alias used by tests
 
 
 def fetch_devices_from_backend():
@@ -90,18 +121,18 @@ def fetch_devices_from_backend():
             print(f"Fetched {len(devices)} device(s) from backend.")
             return devices
         else:
-            print(f"Backend returned {response.status_code}, falling back to local source.")
+            print(f"Backend returned {response.status_code}.")
     except Exception as e:
-        print(f"Could not reach backend: {e}. Falling back to local source.")
+        print(f"Could not reach backend: {e}.")
     return None
 
 
 def get_devices():
     """Return device list.
 
-    If NETWORK_RANGE is set, ping-sweep is the source of truth for discovery;
-    manually registered backend devices (outside the scanned range) are merged in.
-    Otherwise fall back to backend list, then devices.json.
+    If NETWORK_RANGE is set, ping-sweep + auto-detection is the source of truth.
+    Devices already in the backend but outside the scanned range are merged in.
+    Otherwise, fall back to the backend list only.
     """
     if NETWORK_RANGE:
         found = discover_devices(NETWORK_RANGE)
@@ -111,9 +142,7 @@ def get_devices():
         return found + extra
 
     backend_devices = fetch_devices_from_backend()
-    if backend_devices is not None:
-        return backend_devices
-    return load_devices_from_file()
+    return backend_devices or []
 
 
 def ping_device(ip):
@@ -167,7 +196,6 @@ def main():
     last_discovery = time.time()
 
     while True:
-        # Re-fetch device list periodically to pick up new devices
         if (time.time() - last_discovery) >= DISCOVERY_INTERVAL:
             updated = get_devices()
             if updated:
