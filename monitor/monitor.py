@@ -19,6 +19,36 @@ DISCOVERY_INTERVAL = int(os.getenv("DISCOVERY_INTERVAL", "300"))  # re-scan ever
 DISCOVERY_WORKERS = int(os.getenv("DISCOVERY_WORKERS", "50"))      # parallel ping workers
 
 
+def get_default_gateway():
+    """Return the default gateway IP of this machine, or None if undetectable."""
+    try:
+        if platform.system().lower() == 'windows':
+            result = subprocess.run(['ipconfig'], capture_output=True, text=True)
+            for line in result.stdout.splitlines():
+                if 'Default Gateway' in line:
+                    parts = line.split(':', 1)
+                    if len(parts) > 1:
+                        gw = parts[1].strip()
+                        if gw:
+                            return gw
+        else:
+            result = subprocess.run(['ip', 'route'], capture_output=True, text=True)
+            for line in result.stdout.splitlines():
+                if line.startswith('default'):
+                    parts = line.split()
+                    if len(parts) > 2:
+                        return parts[2]
+    except Exception:
+        pass
+    return None
+
+
+# Prefer explicitly configured gateway, fall back to auto-detection
+GATEWAY_IP = os.getenv("GATEWAY_IP") or get_default_gateway()
+if GATEWAY_IP:
+    print(f"[INFO] Gateway IP: {GATEWAY_IP}")
+
+
 def resolve_hostname(ip):
     """Reverse DNS lookup. Returns the hostname or the IP itself if unresolvable."""
     try:
@@ -28,15 +58,20 @@ def resolve_hostname(ip):
 
 
 def detect_device_type(ip):
-    """Probe well-known ports to guess device type.
+    """Guess device type from port probing.
 
-    Detection logic:
-      - Port 9100 open  → printer   (JetDirect / raw print)
-      - Port 23 open    → router    (Telnet management, almost exclusively network gear)
-      - Port 3389 open  → workstation (Windows RDP)
-      - Anything else   → server
+    Priority:
+      1. Matches default gateway            → router  (most reliable for home routers)
+      2. Port 9100 open                     → printer (JetDirect / raw print)
+      3. Port 23 open                       → router  (Telnet, enterprise network gear)
+      4. Port 3389 open                     → workstation (Windows RDP)
+      5. Port 80/443 open, no Windows ports → router  (web-only admin, e.g. home router)
+      6. Anything else                      → server
     """
-    probe_ports = [9100, 23, 3389]
+    if ip == GATEWAY_IP:
+        return "router"
+
+    probe_ports = [9100, 23, 3389, 80, 443, 445]
     open_ports = set()
     for port in probe_ports:
         try:
@@ -54,6 +89,9 @@ def detect_device_type(ip):
         return "router"
     if 3389 in open_ports:
         return "workstation"
+    # Web interface present but no Windows/printer ports → likely a router or AP
+    if (80 in open_ports or 443 in open_ports) and 445 not in open_ports:
+        return "router"
     return "server"
 
 
