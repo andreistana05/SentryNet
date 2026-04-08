@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
 import AppShell from "../components/AppShell";
-import OperationsTable from "../components/OperationsTable";
-import API from "../services/api";
+import OperationsTable, { type OperationsTableColumn } from "../components/OperationsTable";
+import { useDashboardOverview, useDevices, useOperations } from "../hooks/useDashboardData";
+import { buildDashboardStats } from "../lib/dashboard";
+import { statusClassName } from "../lib/formatters";
+import type { Alarm, Device, Incident, OperationType, Problem, Ticket } from "../types/domain";
+
+const EMPTY_DEVICES: Device[] = [];
 
 const pageCopy = {
   alarms: {
@@ -32,74 +36,31 @@ const pageCopy = {
       "Recurring incident detection promotes operational noise into root-cause analysis and longer-term corrective action.",
     summaryLabel: "Problem investigations currently open",
   },
-};
+} as const;
 
-function normalizeCollection(payload) {
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.items)) return payload.items;
-  return [];
+function StatusChip({ value }: { value: unknown }) {
+  const className = statusClassName(value);
+  return <span className={`status-badge ${className}`}>{String(value || "unknown")}</span>;
 }
 
-function StatusChip({ value }) {
-  const className = String(value || "unknown").toLowerCase().replace(/\s+/g, "-");
-  return <span className={`status-badge ${className}`}>{value || "unknown"}</span>;
-}
-
-function OperationsPage({ type }) {
-  const [overview, setOverview] = useState(null);
-  const [devices, setDevices] = useState([]);
-  const [items, setItems] = useState([]);
-  const [loadError, setLoadError] = useState("");
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function load() {
-      const [statusResponse, devicesResponse, itemsResponse] = await Promise.allSettled([
-        API.get("/status"),
-        API.get("/devices"),
-        API.get(`/${type}`),
-      ]);
-
-      if (!isMounted) return;
-
-      if (statusResponse.status === "fulfilled") {
-        setOverview(statusResponse.value.data);
-      }
-
-      if (devicesResponse.status === "fulfilled") {
-        setDevices(normalizeCollection(devicesResponse.value.data));
-      }
-
-      if (itemsResponse.status === "fulfilled") {
-        setItems(normalizeCollection(itemsResponse.value.data));
-      } else {
-        setLoadError(`We couldn't load ${type} from the backend.`);
-      }
-    }
-
-    load();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [type]);
-
+function OperationsPage({ type }: { type: OperationType }) {
+  const overviewQuery = useDashboardOverview();
+  const devicesQuery = useDevices();
+  const itemsQuery = useOperations(type);
+  const devices = devicesQuery.data ?? EMPTY_DEVICES;
+  const items = itemsQuery.data ?? [];
   const config = pageCopy[type];
 
-  const stats = useMemo(() => {
-    return {
-      totalDevices: overview?.devices?.total ?? devices.length,
-      onlineDevices:
-        overview?.devices?.online ?? devices.filter((device) => device.status === "online").length,
-      activeAlerts: overview?.alarms?.open ?? 0,
-      openTickets: overview?.tickets?.open ?? 0,
-      openProblems: overview?.problems?.open ?? 0,
-    };
-  }, [devices, overview]);
+  const stats = buildDashboardStats({
+    overview: overviewQuery.data,
+    devices,
+    alarms: type === "alarms" ? items : undefined,
+    incidents: type === "incidents" ? items : undefined,
+    tickets: type === "tickets" ? items : undefined,
+    problems: type === "problems" ? items : undefined,
+  });
 
-  const columns = {
+  const columns: Record<OperationType, OperationsTableColumn<Alarm | Incident | Ticket | Problem>[]> = {
     alarms: [
       { key: "id", label: "Alarm" },
       { key: "title", label: "Title" },
@@ -144,7 +105,9 @@ function OperationsPage({ type }) {
           <span className="eyebrow">{config.eyebrow}</span>
           <h2>{config.title}</h2>
           <p>{config.description}</p>
-          {loadError ? <div className="table-state error-state">{loadError}</div> : null}
+          {itemsQuery.isError ? (
+            <div className="table-state error-state">{`We couldn't load ${type} from the backend.`}</div>
+          ) : null}
         </div>
 
         <div className="hero-stats">

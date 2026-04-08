@@ -1,0 +1,549 @@
+SentryNet Dashboard Frontend Stack Additions and Backend Contract
+================================================================
+
+Technologies Added To The Frontend Stack
+----------------------------------------
+- TypeScript
+- TanStack Query
+- Zod
+- Recharts
+- Vitest
+- React Testing Library
+- MSW (Mock Service Worker)
+- jsdom
+- typescript-eslint
+
+What Was Added / Changed In The Frontend
+----------------------------------------
+1. TypeScript migration
+- The app was migrated from JS/JSX to TS/TSX for the main application flow.
+- Shared types now define the frontend domain model for devices, overview stats, operations records, auth responses, and metrics.
+
+2. TanStack Query data layer
+- API fetching is now handled through query hooks instead of page-local manual fetch logic.
+- Canonical hooks:
+  - useDashboardOverview
+  - useDevices
+  - useOperations(type)
+  - useDeviceMetrics(deviceId)
+  - useLoginMutation
+  - useRegisterMutation
+
+3. Zod validation
+- Backend payloads are validated at the API boundary before UI code consumes them.
+- This makes the frontend more predictable and safer, but it also means the backend should return reasonably consistent JSON.
+
+4. Recharts visualizations
+- Added first two production dashboard charts:
+  - Fleet status distribution
+  - Operations workload
+
+5. Test stack
+- Added Vitest, React Testing Library, and MSW.
+- Mock API mode is available in frontend development using MSW.
+
+6. Environment-based API configuration
+- Frontend API base URL is controlled through VITE_API_BASE_URL.
+- Frontend dev mock mode is controlled through VITE_ENABLE_API_MOCKING.
+
+
+Frontend Runtime Expectations
+-----------------------------
+The frontend expects the API base URL to point to the backend root:
+
+- Default frontend expectation:
+  http://localhost:8080/api/v1
+
+The frontend calls these endpoints:
+- POST /auth/login
+- POST /auth/register
+- GET /status
+- GET /devices
+- GET /alarms
+- GET /incidents
+- GET /tickets
+- GET /problems
+- GET /devices/:deviceId/metrics
+
+
+Compatibility Notes
+-------------------
+The frontend is tolerant in some places:
+- Collections may be returned as:
+  - [...]
+  - { "data": [...] }
+  - { "items": [...] }
+- Device IP may be:
+  - ip_address
+  - ip
+- Device last seen may be:
+  - last_seen
+  - lastSeen
+- Numeric counts in /status may arrive as strings; the frontend coerces them to numbers.
+
+The frontend is not fully schema-free. These things should be reliable:
+- Every list item should have an id.
+- /status should include device and workflow count buckets.
+- /auth/login must return a token.
+- /devices should return name, type, status, and an IP field.
+
+
+Backend Contract / Spec Sheet
+=============================
+
+1. POST /auth/login
+-------------------
+Purpose:
+- Authenticate the user and return a bearer token for subsequent API requests.
+
+Request JSON:
+{
+  "email": "ops@sentrynet.local",
+  "password": "secret"
+}
+
+Required response JSON:
+{
+  "token": "jwt-or-session-token"
+}
+
+Recommended response JSON:
+{
+  "token": "jwt-or-session-token",
+  "role": "Operator"
+}
+
+Also accepted by the frontend:
+{
+  "token": "jwt-or-session-token",
+  "user": {
+    "role": "Operator"
+  }
+}
+
+Error response JSON:
+{
+  "error": "Login failed"
+}
+
+Notes:
+- The frontend stores token in localStorage and sends it as:
+  Authorization: Bearer <token>
+
+
+2. POST /auth/register
+----------------------
+Purpose:
+- Register a new user and return a bearer token for immediate login.
+
+Request JSON:
+{
+  "username": "Network operator",
+  "email": "ops@sentrynet.local",
+  "password": "secret"
+}
+
+Required response JSON:
+{
+  "token": "jwt-or-session-token"
+}
+
+Recommended response JSON:
+{
+  "token": "jwt-or-session-token",
+  "user": {
+    "role": "Operator"
+  }
+}
+
+Error response JSON:
+{
+  "error": "Registration failed"
+}
+
+
+3. GET /status
+--------------
+Purpose:
+- Return top-level dashboard counts used for cards, summaries, and workload charts.
+
+Required response JSON shape:
+{
+  "devices": {
+    "total": 12,
+    "online": 10
+  },
+  "alarms": {
+    "open": 2
+  },
+  "incidents": {
+    "open": 1
+  },
+  "tickets": {
+    "open": 4
+  },
+  "problems": {
+    "open": 1
+  }
+}
+
+Notes:
+- Values may be numbers or numeric strings, but numbers are preferred.
+- This endpoint is important because it powers:
+  - dashboard metric cards
+  - sidebar summary
+  - workload chart
+
+
+4. GET /devices
+---------------
+Purpose:
+- Return monitored inventory for the dashboard table and metrics page selector.
+
+Accepted response shapes:
+
+Direct array:
+[
+  {
+    "id": "1",
+    "name": "Edge Router 1",
+    "type": "Router",
+    "status": "online",
+    "ip_address": "10.0.0.1",
+    "last_seen": "2026-04-08T10:00:00.000Z"
+  }
+]
+
+Wrapped in data:
+{
+  "data": [
+    {
+      "id": "1",
+      "name": "Edge Router 1",
+      "type": "Router",
+      "status": "online",
+      "ip_address": "10.0.0.1",
+      "last_seen": "2026-04-08T10:00:00.000Z"
+    }
+  ]
+}
+
+Wrapped in items:
+{
+  "items": [
+    {
+      "id": "1",
+      "name": "Edge Router 1",
+      "type": "Router",
+      "status": "online",
+      "ip_address": "10.0.0.1",
+      "last_seen": "2026-04-08T10:00:00.000Z"
+    }
+  ]
+}
+
+Required per-device fields:
+- id
+- name
+- type
+- status
+
+Recommended device fields:
+- ip_address or ip
+- last_seen or lastSeen
+- metrics
+- telemetry
+
+Status values expected by the UI:
+- online
+- offline
+- warning
+- unknown
+
+Notes:
+- Extra fields are allowed.
+- The frontend uses device.status for filtering and chart grouping.
+- The frontend uses device.type to decide which metrics profile to show.
+
+
+5. GET /alarms
+--------------
+Purpose:
+- Return alarm records for dashboard queue previews and the alarms page.
+
+Accepted response shapes:
+- [...]
+- { "data": [...] }
+- { "items": [...] }
+
+Recommended alarm record JSON:
+{
+  "id": "AL-1",
+  "title": "CPU threshold exceeded",
+  "source": "router-1",
+  "severity": "high",
+  "status": "open",
+  "incidentId": "IN-1",
+  "ticketId": "TK-10"
+}
+
+Minimum useful alarm fields:
+- id
+- title or name
+- status
+
+Recommended status/severity examples:
+- severity: low, medium, high, critical
+- status: open, correlated, watching
+
+
+6. GET /incidents
+-----------------
+Purpose:
+- Return incident records for dashboard queue previews and the incidents page.
+
+Accepted response shapes:
+- [...]
+- { "data": [...] }
+- { "items": [...] }
+
+Recommended incident record JSON:
+{
+  "id": "IN-1",
+  "title": "Branch outage",
+  "priority": "p1",
+  "status": "investigating",
+  "owner": "NOC",
+  "linkedTicket": "TK-10",
+  "nextAction": "Dispatch field engineer"
+}
+
+Minimum useful incident fields:
+- id
+- title or name
+- status
+
+
+7. GET /tickets
+---------------
+Purpose:
+- Return ticket records for dashboard queue previews and the tickets page.
+
+Accepted response shapes:
+- [...]
+- { "data": [...] }
+- { "items": [...] }
+
+Recommended ticket record JSON:
+{
+  "id": "TK-10",
+  "title": "Replace failed uplink module",
+  "status": "assigned",
+  "team": "Ops",
+  "assignee": "Alex",
+  "incidentId": "IN-1",
+  "note": "Vendor on site at 14:00"
+}
+
+Minimum useful ticket fields:
+- id
+- title or name
+- status
+
+
+8. GET /problems
+----------------
+Purpose:
+- Return problem-management records for dashboard queue previews and the problems page.
+
+Accepted response shapes:
+- [...]
+- { "data": [...] }
+- { "items": [...] }
+
+Recommended problem record JSON:
+{
+  "id": "PR-1",
+  "title": "Recurring WAN instability",
+  "status": "root-cause-analysis",
+  "owner": "Platform",
+  "linkedIncident": "IN-1",
+  "impact": "Intermittent branch degradation"
+}
+
+Minimum useful problem fields:
+- id
+- title or name
+- status
+
+
+9. GET /devices/:deviceId/metrics
+---------------------------------
+Purpose:
+- Return metrics/telemetry for the selected device in the metrics page.
+
+The frontend intentionally supports flexible payload structures here.
+Accepted high-level shapes:
+- { "metrics": [...] }
+- { "telemetry": [...] }
+- { "data": { "metrics": [...] } }
+- { "data": { "telemetry": [...] } }
+- flat object maps
+
+Recommended array-style response:
+{
+  "metrics": [
+    {
+      "name": "cpu_usage",
+      "value": 83,
+      "unit": "%",
+      "updatedAt": "2026-04-08T10:02:00.000Z"
+    },
+    {
+      "name": "latency",
+      "value": 120,
+      "unit": "ms",
+      "updatedAt": "2026-04-08T10:02:00.000Z"
+    }
+  ]
+}
+
+Also accepted object-map style:
+{
+  "metrics": {
+    "cpu_usage": {
+      "value": 83,
+      "unit": "%",
+      "updatedAt": "2026-04-08T10:02:00.000Z"
+    },
+    "latency": {
+      "value": 120,
+      "unit": "ms",
+      "updatedAt": "2026-04-08T10:02:00.000Z"
+    }
+  }
+}
+
+Minimum requirement:
+- The payload must expose some recognizable metric names and values.
+
+Metric aliases the frontend already understands
+-----------------------------------------------
+Compute profile examples:
+- cpu
+- cpuusage
+- cpu_usage
+- cpuutilization
+- ram
+- memory
+- ram_usage
+- memory_usage
+- disk
+- storage
+- disk_usage
+- temperature
+- temp
+- latency
+- response_time
+- ping
+
+Network profile examples:
+- cpu
+- memory
+- interface
+- bandwidth
+- throughput
+- interfaceutilization
+- packetloss
+- packet_loss
+- latency
+
+Printer profile examples:
+- toner
+- toner_level
+- drum
+- drum_health
+- paper
+- paper_level
+- queue_depth
+- pending_jobs
+- response_time
+
+Notes:
+- The metrics page does not require every metric to be present.
+- Missing metrics are shown as "Not reporting".
+
+
+Authentication Header Contract
+------------------------------
+After login/register, the frontend sends:
+
+Authorization: Bearer <token>
+
+The backend should:
+- accept bearer tokens on protected endpoints
+- return 401/403 when unauthorized
+
+
+Recommended HTTP Status Codes
+-----------------------------
+- 200 OK for successful reads
+- 201 Created for successful registration if desired
+- 400 Bad Request for invalid input
+- 401 Unauthorized for failed auth / missing token
+- 403 Forbidden for insufficient permissions
+- 404 Not Found for missing device or record
+- 500 Internal Server Error for unexpected failures
+
+
+Implementation Difficulty Assessment
+------------------------------------
+Difficulty should be moderate, not high, if the backend follows this contract.
+
+Why it should be manageable:
+- The frontend still uses a small number of straightforward REST endpoints.
+- It accepts multiple collection envelope styles.
+- It accepts multiple device field aliases.
+- The metrics endpoint is intentionally flexible.
+
+What will cause friction:
+- Returning very different field names than the ones listed here
+- Omitting required count buckets from /status
+- Returning auth tokens in a deeply nested or unexpected shape
+- Returning records without ids
+
+
+Best Backend First-Pass Strategy
+--------------------------------
+Implement in this order:
+1. POST /auth/login
+2. GET /status
+3. GET /devices
+4. GET /alarms
+5. GET /incidents
+6. GET /tickets
+7. GET /problems
+8. GET /devices/:deviceId/metrics
+9. POST /auth/register
+
+This order gets the main dashboard functional as quickly as possible.
+
+
+Frontend Environment Flags
+--------------------------
+Development with real backend:
+{
+  "VITE_API_BASE_URL": "http://localhost:8080/api/v1",
+  "VITE_ENABLE_API_MOCKING": "false"
+}
+
+Development with mocked frontend API:
+{
+  "VITE_API_BASE_URL": "http://localhost:8080/api/v1",
+  "VITE_ENABLE_API_MOCKING": "true"
+}
+
+
+Final Recommendation
+--------------------
+If a backend developer implements the routes and JSON shapes in this document, the frontend should integrate without major structural changes.

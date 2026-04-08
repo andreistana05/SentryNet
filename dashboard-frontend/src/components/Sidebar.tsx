@@ -1,6 +1,14 @@
 import { NavLink } from "react-router-dom";
 
-function Sidebar({ totalDevices, onlineDevices, activeAlerts, openTickets, openProblems }) {
+interface SidebarProps {
+  totalDevices: number;
+  onlineDevices: number;
+  activeAlerts: number;
+  openTickets: number;
+  openProblems: number;
+}
+
+function Sidebar({ totalDevices, onlineDevices, activeAlerts, openTickets, openProblems }: SidebarProps) {
   const links = [
     { label: "Overview", to: "/dashboard" },
     { label: "Metrics", to: "/dashboard/metrics" },
@@ -37,23 +45,23 @@ function Sidebar({ totalDevices, onlineDevices, activeAlerts, openTickets, openP
         <span className="eyebrow">Network Pulse</span>
         <div className="summary-grid summary-grid-extended">
           <div>
-            <strong>{totalDevices ?? 0}</strong>
+            <strong>{totalDevices}</strong>
             <span>Assets</span>
           </div>
           <div>
-            <strong>{onlineDevices ?? 0}</strong>
+            <strong>{onlineDevices}</strong>
             <span>Online</span>
           </div>
           <div>
-            <strong>{activeAlerts ?? 0}</strong>
+            <strong>{activeAlerts}</strong>
             <span>Alerts</span>
           </div>
           <div>
-            <strong>{openTickets ?? 0}</strong>
+            <strong>{openTickets}</strong>
             <span>Tickets</span>
           </div>
           <div>
-            <strong>{openProblems ?? 0}</strong>
+            <strong>{openProblems}</strong>
             <span>Problems</span>
           </div>
         </div>

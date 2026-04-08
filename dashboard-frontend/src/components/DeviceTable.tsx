@@ -1,6 +1,20 @@
 import { Link } from "react-router-dom";
+import type { Device } from "../types/domain";
 
-function DeviceTable({ devices, loading, error, totalDevices, filteredCount }) {
+interface TableDevice extends Device {
+  ip: string;
+  lastSeenLabel: string;
+}
+
+interface DeviceTableProps {
+  devices: TableDevice[];
+  loading: boolean;
+  error: string;
+  totalDevices: number;
+  filteredCount: number;
+}
+
+function DeviceTable({ devices, loading, error, totalDevices, filteredCount }: DeviceTableProps) {
   const hasDevices = devices.length > 0;
 
   return (
@@ -63,7 +77,7 @@ function DeviceTable({ devices, loading, error, totalDevices, filteredCount }) {
                       {device.status}
                     </span>
                   </td>
-                  <td>{device.lastSeen}</td>
+                  <td>{device.lastSeenLabel}</td>
                   <td>
                     <Link className="table-action-link" to={`/dashboard/metrics?device=${device.id}`}>
                       View metrics

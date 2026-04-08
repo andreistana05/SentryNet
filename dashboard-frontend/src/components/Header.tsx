@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { clearStoredAuth, getStoredRole } from "../lib/storage";
 
 function Header() {
   const navigate = useNavigate();
-  const role = localStorage.getItem("role") || "Operator";
+  const role = getStoredRole();
 
   const dateLabel = useMemo(() => {
     return new Intl.DateTimeFormat("en-US", {
@@ -21,8 +22,7 @@ function Header() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
+    clearStoredAuth();
     navigate("/");
   };
 
@@ -41,7 +41,7 @@ function Header() {
 
         <div className="role-pill">{role}</div>
 
-        <button className="logout-btn" onClick={handleLogout}>
+        <button className="logout-btn" onClick={handleLogout} type="button">
           Logout
         </button>
       </div>
