@@ -25,16 +25,21 @@ def collect_temperature():
             result = subprocess.run(
                 [
                     "powershell", "-NoProfile", "-Command",
-                    "(Get-WmiObject -Namespace root/wmi -Class MSAcpi_ThermalZoneTemperature)"
-                    ".CurrentTemperature",
+                    "Get-WmiObject -Namespace root/wmi -Class MSAcpi_ThermalZoneTemperature"
+                    " | Select-Object -ExpandProperty CurrentTemperature",
                 ],
                 capture_output=True, text=True, timeout=5,
             )
-            lines = [l.strip() for l in result.stdout.splitlines() if l.strip()]
-            if lines:
-                celsius = (float(lines[0]) / 10.0) - 273.15
-                if 0 < celsius < 150:   # sanity check
-                    return round(celsius, 1)
+            for line in result.stdout.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    celsius = (float(line) / 10.0) - 273.15
+                    if 0 < celsius < 150:
+                        return round(celsius, 1)
+                except ValueError:
+                    continue
         except Exception:
             pass
 

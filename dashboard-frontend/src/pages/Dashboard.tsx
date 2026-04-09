@@ -256,17 +256,34 @@ function Dashboard() {
           ).map(({ key: group, items }) => (
             <div key={group} className="queue-column">
               <h4>{group}</h4>
-              {items.slice(0, 3).map((item, index) => (
-                <div key={item.id ?? `${group}-${index}`} className="queue-card">
-                  <div className="queue-card-top">
-                    <strong>{item.id ?? "Unlinked"}</strong>
-                    <span className={`status-badge ${statusClassName(item.status)}`}>
-                      {String(item.status ?? "unknown")}
-                    </span>
+              {items.slice(0, 3).map((item, index) => {
+                const raw = item as Record<string, unknown>;
+                const displayId =
+                  raw.alarm_number ??
+                  raw.incident_number ??
+                  raw.ticket_number ??
+                  raw.problem_number ??
+                  item.id ??
+                  "Unlinked";
+                const displayTitle =
+                  (raw.alarm as string | undefined) ??
+                  (raw.description as string | undefined) ??
+                  (raw.alarm_name as string | undefined) ??
+                  item.title ??
+                  item.name ??
+                  "Untitled record";
+                return (
+                  <div key={item.id ?? `${group}-${index}`} className="queue-card">
+                    <div className="queue-card-top">
+                      <strong>{String(displayId)}</strong>
+                      <span className={`status-badge ${statusClassName(item.status)}`}>
+                        {String(item.status ?? "unknown")}
+                      </span>
+                    </div>
+                    <p>{String(displayTitle)}</p>
                   </div>
-                  <p>{String(item.title ?? item.name ?? "Untitled record")}</p>
-                </div>
-              ))}
+                );
+              })}
               {items.length ? null : (
                 <div className="queue-card">
                   <p>No {group} are currently available.</p>

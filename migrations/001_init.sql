@@ -80,11 +80,13 @@ CREATE TABLE IF NOT EXISTS incidents (
 CREATE INDEX IF NOT EXISTS idx_incidents_alarm_id ON incidents(alarm_id);
 CREATE INDEX IF NOT EXISTS idx_incidents_status   ON incidents(status);
 
--- tickets: one per alarm, serves as the living document for an alarm's lifecycle.
+-- tickets: one per incident, serves as the living document for an incident's lifecycle.
+-- alarm_id is nullable (populated by AutoMigrate legacy; use incident_id as the canonical FK).
 CREATE TABLE IF NOT EXISTS tickets (
     id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     ticket_number      VARCHAR(20)   NOT NULL UNIQUE,
-    alarm_id           UUID          NOT NULL UNIQUE REFERENCES alarms(id) ON DELETE CASCADE,
+    alarm_id           UUID          REFERENCES alarms(id) ON DELETE SET NULL,
+    incident_id        UUID          NOT NULL UNIQUE REFERENCES incidents(id) ON DELETE CASCADE,
     title              VARCHAR(255)  NOT NULL,
     status             VARCHAR(20)   NOT NULL DEFAULT 'Open',
     priority           VARCHAR(10)   NOT NULL,

@@ -26,6 +26,7 @@ export function useDashboardOverview() {
     queryKey: ["overview"],
     queryFn: getDashboardOverview,
     staleTime: 30_000,
+    refetchInterval: 30_000,
   });
 }
 
@@ -34,6 +35,7 @@ export function useDevices() {
     queryKey: ["devices"],
     queryFn: getDevices,
     staleTime: 30_000,
+    refetchInterval: 30_000,
   });
 }
 
@@ -49,6 +51,7 @@ export function useOperations<T extends OperationType>(type: T) {
     queryKey: ["operations", type],
     queryFn: () => getOperations(type) as Promise<OperationsMap[T]>,
     staleTime: 20_000,
+    refetchInterval: 30_000,
   });
 }
 
@@ -58,7 +61,7 @@ export function useDeviceMetrics(deviceId: string | number | null | undefined) {
     queryFn: () => getDeviceMetrics(deviceId as string | number),
     enabled: Boolean(deviceId),
     staleTime: 15_000,
-    refetchInterval: 30_000,
+    refetchInterval: 15_000,
   });
 }
 

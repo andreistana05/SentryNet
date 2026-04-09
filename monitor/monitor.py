@@ -14,9 +14,31 @@ INTERVAL = int(os.getenv("MONITOR_INTERVAL", "30"))
 OFFLINE_THRESHOLD = int(os.getenv("OFFLINE_THRESHOLD", "3"))
 PING_COUNT = int(os.getenv("PING_COUNT", "1"))
 PING_TIMEOUT = int(os.getenv("PING_TIMEOUT", "1"))
-NETWORK_RANGE = os.getenv("NETWORK_RANGE", "")
+_raw_range = os.getenv("NETWORK_RANGE", "")
+NETWORK_RANGES = [r.strip() for r in _raw_range.split(",") if r.strip()]
 DISCOVERY_INTERVAL = int(os.getenv("DISCOVERY_INTERVAL", "300"))  # re-scan every 5 min
 DISCOVERY_WORKERS = int(os.getenv("DISCOVERY_WORKERS", "50"))      # parallel ping workers
+
+# Comma-separated CIDR ranges to exclude from monitoring (e.g. Docker bridge networks).
+# Defaults to the Docker bridge range so container IPs are never registered as devices.
+_raw_ignore = os.getenv("IGNORE_RANGES", "172.16.0.0/12")
+IGNORE_NETWORKS = []
+for _cidr in _raw_ignore.split(","):
+    _cidr = _cidr.strip()
+    if _cidr:
+        try:
+            IGNORE_NETWORKS.append(ipaddress.ip_network(_cidr, strict=False))
+        except ValueError:
+            pass
+
+
+def is_ignored(ip):
+    """Return True if the IP falls within any IGNORE_NETWORKS range."""
+    try:
+        addr = ipaddress.ip_address(ip)
+        return any(addr in net for net in IGNORE_NETWORKS)
+    except ValueError:
+        return False
 
 
 def get_default_gateway():
@@ -129,7 +151,7 @@ def discover_devices(network_range):
 
     alive = []
     with ThreadPoolExecutor(max_workers=DISCOVERY_WORKERS) as ex:
-        futures = {ex.submit(_identify_device, ip): ip for ip in hosts}
+        futures = {ex.submit(_identify_device, ip): ip for ip in hosts if not is_ignored(ip)}
         for future in as_completed(futures):
             result = future.result()
             if result:
@@ -172,26 +194,64 @@ def get_devices():
     Devices already in the backend but outside the scanned range are merged in.
     Otherwise, fall back to the backend list only.
     """
-    if NETWORK_RANGE:
-        found = discover_devices(NETWORK_RANGE)
+    if NETWORK_RANGES:
+        found = []
+        for net_range in NETWORK_RANGES:
+            found.extend(discover_devices(net_range))
+        # Deduplicate by IP in case ranges overlap
+        seen = set()
+        unique_found = []
+        for d in found:
+            if d["ip_address"] not in seen:
+                seen.add(d["ip_address"])
+                unique_found.append(d)
         backend_devices = fetch_devices_from_backend() or []
-        found_ips = {d["ip_address"] for d in found}
-        extra = [d for d in backend_devices if d["ip_address"] not in found_ips]
-        return found + extra
+        # Only include backend devices outside all scanned ranges AND not ignored
+        extra = [
+            d for d in backend_devices
+            if d["ip_address"] not in seen and not is_ignored(d["ip_address"])
+        ]
+        return unique_found + extra
 
     backend_devices = fetch_devices_from_backend()
     return backend_devices or []
 
 
 def ping_device(ip):
-    """Send ping to IP and return True if it responds."""
+    """Ping an IP and return (alive, rtt_ms). rtt_ms is None if unreachable."""
     try:
         param = '-n' if platform.system().lower() == 'windows' else '-c'
         command = ['ping', param, str(PING_COUNT), ip]
         result = subprocess.run(command, capture_output=True, text=True, timeout=PING_TIMEOUT + 2)
-        return result.returncode == 0
+        alive = result.returncode == 0
+        rtt = None
+        if alive:
+            # Windows: "time=5ms" or "Average = 5ms"
+            # Linux:   "time=5.32 ms"
+            import re
+            match = re.search(r'[Tt]ime[<=]\s*(\d+\.?\d*)\s*ms', result.stdout)
+            if not match:
+                match = re.search(r'Average\s*=\s*(\d+)\s*ms', result.stdout)
+            if match:
+                rtt = float(match.group(1))
+        return alive, rtt
     except Exception:
-        return False
+        return False, None
+
+
+def send_passive_metrics(hostname, ip, device_type, rtt_ms):
+    """Push latency + availability metrics collected by the monitor (no agent needed)."""
+    headers = {"X-API-Key": API_KEY, "Content-Type": "application/json"}
+    metrics = [{"type": "availability", "value": 1, "unit": "bool"}]
+    if rtt_ms is not None:
+        metrics.append({"type": "latency", "value": rtt_ms, "unit": "ms"})
+    payload = {"hostname": hostname, "ip_address": ip, "device_type": device_type, "metrics": metrics}
+    try:
+        requests.post(f"{BACKEND_URL}/api/v1/ingest/metrics", json=payload, headers=headers, timeout=5)
+    except Exception:
+        pass
+
+
 
 
 def send_heartbeat(hostname, ip, device_type):
@@ -245,7 +305,7 @@ def main():
             ip = device["ip_address"]
             hostname = device.get("hostname", ip)
             device_type = device.get("type", "server")
-            alive = ping_device(ip)
+            alive, rtt_ms = ping_device(ip)
             state = device_state.get(ip, {"failed": 0, "offline": False})
 
             if alive:
@@ -254,6 +314,7 @@ def main():
                 state["failed"] = 0
                 state["offline"] = False
                 send_heartbeat(hostname, ip, device_type)
+                send_passive_metrics(hostname, ip, device_type, rtt_ms)
             else:
                 state["failed"] += 1
                 if state["failed"] >= OFFLINE_THRESHOLD and not state["offline"]:

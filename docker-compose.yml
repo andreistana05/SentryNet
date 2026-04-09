@@ -56,7 +56,7 @@ services:
 
   agent:
     build: ./agent
-    restart: unless-stopped
+    restart: "no"
     env_file:
       - .env
     environment:
