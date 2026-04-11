@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -16,10 +17,89 @@ import (
 type IngestHandler struct {
 	devices *service.DeviceService
 	metrics *service.MetricService
+	alarms  *service.AlarmService
 }
 
-func NewIngestHandler(devices *service.DeviceService, metrics *service.MetricService) *IngestHandler {
-	return &IngestHandler{devices: devices, metrics: metrics}
+func NewIngestHandler(devices *service.DeviceService, metrics *service.MetricService, alarms *service.AlarmService) *IngestHandler {
+	return &IngestHandler{devices: devices, metrics: metrics, alarms: alarms}
+}
+
+// EventRequest is the payload sent by the monitor or agent to fire (or resolve)
+// an alarm directly — without waiting for a sustained metric threshold.
+type EventRequest struct {
+	Hostname    string            `json:"hostname"`
+	IPAddress   string            `json:"ip_address" binding:"required"`
+	DeviceType  models.DeviceType `json:"device_type"`
+	EventType   string            `json:"event_type" binding:"required"`
+	Severity    string            `json:"severity"`    // "high" | "medium" | "low"
+	Group       string            `json:"group"`       // assigned team, optional
+	Description string            `json:"description"` // human-readable detail
+	Resolve     bool              `json:"resolve"`     // true → close the alarm
+}
+
+// Event godoc
+// POST /api/v1/ingest/event
+// Creates or resolves an alarm directly from an agent/monitor event.
+func (h *IngestHandler) Event(c *gin.Context) {
+	var req EventRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	deviceType := req.DeviceType
+	if deviceType == "" {
+		deviceType = models.DeviceTypeServer
+	}
+
+	// Resolve or auto-create the device so events register it in the inventory.
+	device, err := h.devices.EnsureDevice(req.Hostname, req.IPAddress, deviceType)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resolve device: " + err.Error()})
+		return
+	}
+
+	// Build a stable alarm name from event type + device ID.
+	alarmName := fmt.Sprintf("%s (device:%s)", req.EventType, device.ID)
+
+	priority := severityToPriority(req.Severity)
+	group := req.Group
+	if group == "" {
+		group = defaultGroup(req.EventType)
+	}
+
+	h.alarms.IngestEvent(alarmName, priority, group, req.Resolve)
+
+	c.JSON(http.StatusAccepted, gin.H{
+		"device_id":  device.ID,
+		"alarm_name": alarmName,
+		"resolve":    req.Resolve,
+	})
+}
+
+// severityToPriority converts the string severity from the request into the
+// internal TicketPriority used by the alarm service.
+func severityToPriority(s string) models.TicketPriority {
+	switch s {
+	case "high":
+		return models.PriorityHigh
+	case "low":
+		return models.PriorityLow
+	default:
+		return models.PriorityMedium
+	}
+}
+
+// defaultGroup returns a sensible assigned group based on the event type.
+func defaultGroup(eventType string) string {
+	switch eventType {
+	case "device_offline", "ping_failure":
+		return "IT Support"
+	case "port_down", "connectivity_loss":
+		return "Network Team"
+	default:
+		return "IT Support"
+	}
 }
 
 // Metrics godoc

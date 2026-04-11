@@ -30,6 +30,35 @@ func NewPostgres(dsn string) (*gorm.DB, error) {
 
 // Migrate runs GORM auto-migration for all models.
 func Migrate(db *gorm.DB) error {
+	// Pre-migration: add alarm_number to existing rows so GORM can enforce NOT NULL.
+	// This is a no-op if the column already exists.
+	if err := db.Exec(`
+		DO $$
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_schema = CURRENT_SCHEMA()
+				  AND table_name   = 'alarms'
+				  AND column_name  = 'alarm_number'
+			) THEN
+				-- Add as nullable first to accommodate existing rows.
+				ALTER TABLE alarms ADD COLUMN alarm_number varchar(20);
+				-- Populate with unique sequential numbers (ALM0001, ALM0002, …).
+				UPDATE alarms
+				   SET alarm_number = 'ALM' || LPAD(CAST(seq AS TEXT), 4, '0')
+				  FROM (
+				       SELECT id, ROW_NUMBER() OVER (ORDER BY submit_date, id) AS seq
+				         FROM alarms
+				       ) ranked
+				 WHERE alarms.id = ranked.id;
+				-- Now safe to add NOT NULL.
+				ALTER TABLE alarms ALTER COLUMN alarm_number SET NOT NULL;
+			END IF;
+		END $$;
+	`).Error; err != nil {
+		return fmt.Errorf("pre-migrate alarm_number: %w", err)
+	}
+
 	return db.AutoMigrate(
 		&models.User{},
 		&models.Device{},

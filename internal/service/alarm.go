@@ -83,6 +83,27 @@ var metricRules = map[models.MetricType]MetricRule{
 			// Handled separately via tonerRules below.
 		},
 	},
+	// Packet loss: % of ICMP probes that did not receive a reply.
+	// Thresholds aligned with the frontend metrics.ts contract.
+	models.MetricPacketLoss: {
+		Group: "Network Team",
+		Tiers: []Tier{
+			{MinValue: 5, Priority: models.PriorityLow, Duration: 10 * time.Minute},
+			{MinValue: 15, Priority: models.PriorityMedium, Duration: 5 * time.Minute},
+			{MinValue: 30, Priority: models.PriorityHigh, Duration: 2 * time.Minute},
+		},
+	},
+	// Network errors: cumulative interface errors + drops since last collection.
+	// Even a handful of errors in a short window is worth a Low alarm;
+	// sustained bursts escalate quickly.
+	models.MetricNetworkErrors: {
+		Group: "Network Team",
+		Tiers: []Tier{
+			{MinValue: 5, Priority: models.PriorityLow, Duration: 5 * time.Minute},
+			{MinValue: 20, Priority: models.PriorityMedium, Duration: 3 * time.Minute},
+			{MinValue: 100, Priority: models.PriorityHigh, Duration: 1 * time.Minute},
+		},
+	},
 }
 
 // tonerRules defines low-toner thresholds (value must be <= MinValue).
@@ -161,12 +182,55 @@ func (s *AlarmService) EvaluateMetrics(deviceID uuid.UUID, _ models.DeviceType, 
 			s.evaluateToner(deviceID, item)
 			continue
 		}
+		if item.Type == models.MetricPortStatus {
+			s.evaluatePortStatus(deviceID, item)
+			continue
+		}
 		rule, ok := metricRules[item.Type]
 		if !ok || len(rule.Tiers) == 0 {
 			continue
 		}
 		s.evaluateMetric(deviceID, item, rule, false)
 	}
+}
+
+// evaluatePortStatus handles port_status metrics where value=0 means the port
+// is down.  The port name is carried in item.Unit (e.g. "eth0", "SSH(22)").
+// A High-priority alarm is raised after the port has been continuously down
+// for portDownDuration; the alarm auto-closes when the port recovers.
+const portDownDuration = 1 * time.Minute
+
+func (s *AlarmService) evaluatePortStatus(deviceID uuid.UUID, item IngestMetricItem) {
+	portName := item.Unit
+	if portName == "" {
+		portName = "unknown"
+	}
+	// Unique breach-tracker key per device + port.
+	key := deviceID.String() + ":port_status:" + portName
+	alarmName := fmt.Sprintf("Port %s down (device:%s)", portName, deviceID)
+
+	s.breachMu.Lock()
+	defer s.breachMu.Unlock()
+
+	if item.Value != 0 {
+		// Port is up — clear any tracked breach and auto-close the alarm.
+		delete(s.breachTracker, key)
+		go s.closeAlarmByName(alarmName)
+		return
+	}
+
+	// Port is down — start or continue tracking.
+	state, tracked := s.breachTracker[key]
+	if !tracked {
+		s.breachTracker[key] = &breachState{since: time.Now(), tierIdx: 0}
+		return
+	}
+
+	if time.Since(state.since) < portDownDuration {
+		return // still within grace period
+	}
+
+	go s.createOrEscalate(alarmName, models.PriorityHigh, "Network Team")
 }
 
 // evaluateMetric handles a single metric reading against a standard (ascending) rule.
@@ -465,6 +529,23 @@ func (s *AlarmService) appendTicketUpdate(incidentID uuid.UUID, event models.Eve
 	if err := s.tickets.AddUpdate(u); err != nil {
 		log.Printf("ticket update: AddUpdate: %v", err)
 	}
+}
+
+// IngestEvent creates or resolves an alarm directly from an external event
+// (agent or monitor) without requiring a sustained metric-threshold breach.
+//
+// When resolve=false the alarm is created (or its priority escalated if one is
+// already active). When resolve=true the alarm is auto-closed, signalling that
+// the condition cleared — e.g. a device that was offline has recovered.
+//
+// alarmName should be a stable, human-readable identifier built from eventType
+// and the device identity, e.g. "device_offline (device:<id>)".
+func (s *AlarmService) IngestEvent(alarmName string, priority models.TicketPriority, group string, resolve bool) {
+	if resolve {
+		go s.closeAlarmByName(alarmName)
+		return
+	}
+	go s.createOrEscalate(alarmName, priority, group)
 }
 
 // CreateOfflineAlarm creates a "Device offline" alarm if one is not already active.

@@ -72,6 +72,71 @@ def collect_latency(timeout=3):
     return None
 
 
+# Module-level snapshot of per-NIC I/O counters from the previous collection
+# cycle.  Used to compute the delta (errors/drops added since last check).
+_prev_net_counters: dict = {}
+
+
+def collect_network_errors():
+    """
+    Return a network_errors metric for every non-loopback interface that has
+    accumulated new I/O errors or dropped packets since the last call.
+    value = total new error/drop events (errin + errout + dropin + dropout).
+    The interface name is in 'unit' so per-interface alarms are possible.
+    """
+    global _prev_net_counters
+    metrics = []
+    try:
+        current = psutil.net_io_counters(pernic=True)
+        for iface, counters in current.items():
+            if iface.lower() in ("lo", "loopback") or iface.lower().startswith("lo0"):
+                continue
+            prev = _prev_net_counters.get(iface)
+            if prev is not None:
+                delta = (
+                    (counters.errin  - prev.errin)
+                    + (counters.errout - prev.errout)
+                    + (counters.dropin  - prev.dropin)
+                    + (counters.dropout - prev.dropout)
+                )
+                # Guard against counter resets (reboot / interface restart).
+                delta = max(delta, 0)
+                if delta > 0:
+                    metrics.append({
+                        "type": "network_errors",
+                        "value": float(delta),
+                        "unit": iface,
+                    })
+        _prev_net_counters = current
+    except Exception:
+        pass
+    return metrics
+
+
+def collect_port_status():
+    """
+    Return a port_status metric for every non-loopback network interface.
+    value=1 means the interface is up, value=0 means it is down.
+    The interface name is carried in the 'unit' field so the backend can
+    generate a per-port alarm (e.g. "Port eth0 down").
+    """
+    metrics = []
+    try:
+        stats = psutil.net_if_stats()
+        for iface, info in stats.items():
+            # Skip loopback interfaces
+            if iface.lower() in ("lo", "loopback") or iface.lower().startswith("lo0"):
+                continue
+            metrics.append({
+                "type": "port_status",
+                "value": 1 if info.isup else 0,
+                "unit": iface,
+            })
+    except Exception:
+        pass
+    return metrics
+
+
 def collect_metrics():
     memory = psutil.virtual_memory()
     disk = psutil.disk_usage(os.path.abspath(os.sep))
@@ -91,6 +156,9 @@ def collect_metrics():
     latency = collect_latency()
     if latency is not None:
         metrics.append({"type": "latency", "value": latency, "unit": "ms"})
+
+    metrics.extend(collect_port_status())
+    metrics.extend(collect_network_errors())
 
     return metrics
 

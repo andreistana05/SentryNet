@@ -218,33 +218,85 @@ def get_devices():
 
 
 def ping_device(ip):
-    """Ping an IP and return (alive, rtt_ms). rtt_ms is None if unreachable."""
+    """Ping an IP and return (alive, rtt_ms, packet_loss_pct).
+
+    Uses at least 3 probes so packet loss is meaningful.
+    rtt_ms and packet_loss_pct are None when the host is completely unreachable.
+    """
+    import re
+    ping_n = max(PING_COUNT, 3)   # need ≥3 probes for useful loss %
     try:
-        param = '-n' if platform.system().lower() == 'windows' else '-c'
-        command = ['ping', param, str(PING_COUNT), ip]
-        result = subprocess.run(command, capture_output=True, text=True, timeout=PING_TIMEOUT + 2)
-        alive = result.returncode == 0
-        rtt = None
-        if alive:
-            # Windows: "time=5ms" or "Average = 5ms"
-            # Linux:   "time=5.32 ms"
-            import re
-            match = re.search(r'[Tt]ime[<=]\s*(\d+\.?\d*)\s*ms', result.stdout)
+        is_win = platform.system().lower() == 'windows'
+        param   = '-n' if is_win else '-c'
+        command = ['ping', param, str(ping_n), ip]
+        result  = subprocess.run(command, capture_output=True, text=True, timeout=PING_TIMEOUT + ping_n + 1)
+        alive   = result.returncode == 0
+        rtt     = None
+        loss    = None
+
+        if result.stdout:
+            # RTT — Windows "Average = 5ms" / Linux "avg ... 5.32/"
+            match = re.search(r'Average\s*=\s*(\d+)\s*ms', result.stdout)
             if not match:
-                match = re.search(r'Average\s*=\s*(\d+)\s*ms', result.stdout)
+                match = re.search(r'[Tt]ime[<=]\s*(\d+\.?\d*)\s*ms', result.stdout)
             if match:
                 rtt = float(match.group(1))
-        return alive, rtt
+
+            # Packet loss — Windows "Lost = N (X% loss)" / Linux "X% packet loss"
+            loss_match = re.search(r'\((\d+)%\s*loss\)', result.stdout)
+            if not loss_match:
+                loss_match = re.search(r'(\d+)%\s*packet loss', result.stdout)
+            if loss_match:
+                loss = float(loss_match.group(1))
+            elif not alive:
+                loss = 100.0
+
+        return alive, rtt, loss
     except Exception:
-        return False, None
+        return False, None, 100.0
 
 
-def send_passive_metrics(hostname, ip, device_type, rtt_ms):
-    """Push latency + availability metrics collected by the monitor (no agent needed)."""
+# Ports to probe per device type.  The dict value is a human-readable label
+# used as the 'unit' field so the backend can name alarms like
+# "Port SSH(22) down (device:<id>)".
+_PORT_PROBES: dict[str, list[tuple[int, str]]] = {
+    "router":      [(22, "SSH(22)"), (23, "Telnet(23)"), (80, "HTTP(80)"), (443, "HTTPS(443)")],
+    "switch":      [(22, "SSH(22)"), (23, "Telnet(23)"), (80, "HTTP(80)")],
+    "server":      [(22, "SSH(22)"), (80, "HTTP(80)"), (443, "HTTPS(443)")],
+    "workstation": [(3389, "RDP(3389)"), (445, "SMB(445)")],
+    "printer":     [(9100, "JetDirect(9100)"), (80, "HTTP(80)")],
+}
+
+
+def check_device_ports(ip: str, device_type: str, timeout: float = 0.5) -> list[dict]:
+    """
+    Probe the well-known TCP ports for *device_type* and return a list of
+    port_status metrics (value=1 up, value=0 down).  The port label is stored
+    in 'unit' so the backend can build a meaningful per-port alarm name.
+    """
+    probes = _PORT_PROBES.get(device_type, _PORT_PROBES["server"])
+    metrics = []
+    for port, label in probes:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(timeout)
+            up = s.connect_ex((ip, port)) == 0
+            s.close()
+        except Exception:
+            up = False
+        metrics.append({"type": "port_status", "value": 1 if up else 0, "unit": label})
+    return metrics
+
+
+def send_passive_metrics(hostname, ip, device_type, rtt_ms, packet_loss_pct=None):
+    """Push latency + packet_loss + availability + port-status metrics collected by the monitor."""
     headers = {"X-API-Key": API_KEY, "Content-Type": "application/json"}
     metrics = [{"type": "availability", "value": 1, "unit": "bool"}]
     if rtt_ms is not None:
         metrics.append({"type": "latency", "value": rtt_ms, "unit": "ms"})
+    if packet_loss_pct is not None:
+        metrics.append({"type": "packet_loss", "value": packet_loss_pct, "unit": "%"})
+    metrics.extend(check_device_ports(ip, device_type))
     payload = {"hostname": hostname, "ip_address": ip, "device_type": device_type, "metrics": metrics}
     try:
         requests.post(f"{BACKEND_URL}/api/v1/ingest/metrics", json=payload, headers=headers, timeout=5)
@@ -268,21 +320,38 @@ def send_heartbeat(hostname, ip, device_type):
         print(f"HTTP error for {hostname}: {e}")
 
 
-def send_error_event(hostname, ip, device_type, error_type, error_text):
-    """Send an error event to backend as a metrics payload."""
+def send_event(hostname, ip, device_type, event_type, description,
+               severity="high", group="", resolve=False):
+    """
+    Post a structured event to POST /api/v1/ingest/event.
+
+    When resolve=False the backend creates (or escalates) an alarm immediately.
+    When resolve=True the backend closes the matching alarm — call this when the
+    condition clears (e.g. device comes back online after an offline event).
+    """
     headers = {"X-API-Key": API_KEY, "Content-Type": "application/json"}
     payload = {
-        "hostname": hostname,
-        "ip_address": ip,
+        "hostname":    hostname,
+        "ip_address":  ip,
         "device_type": device_type,
-        "metrics": [{"type": error_type, "value": 1, "unit": "count"}],
+        "event_type":  event_type,
+        "severity":    severity,
+        "group":       group,
+        "description": description,
+        "resolve":     resolve,
     }
     try:
-        response = requests.post(f"{BACKEND_URL}/api/v1/ingest/metrics", json=payload, headers=headers)
+        response = requests.post(
+            f"{BACKEND_URL}/api/v1/ingest/event",
+            json=payload,
+            headers=headers,
+            timeout=5,
+        )
+        action = "resolved" if resolve else "fired"
         if response.status_code == 202:
-            print(f"Error event sent for {hostname} ({ip}): {error_text}")
+            print(f"Event {action}: {event_type} for {hostname} ({ip}) — {description}")
         else:
-            print(f"Error event failed for {hostname}: {response.status_code} {response.text}")
+            print(f"Event {action} failed for {hostname}: {response.status_code} {response.text}")
     except Exception as e:
         print(f"HTTP error sending event for {hostname}: {e}")
 
@@ -305,22 +374,35 @@ def main():
             ip = device["ip_address"]
             hostname = device.get("hostname", ip)
             device_type = device.get("type", "server")
-            alive, rtt_ms = ping_device(ip)
+            alive, rtt_ms, packet_loss_pct = ping_device(ip)
             state = device_state.get(ip, {"failed": 0, "offline": False})
 
             if alive:
                 if state["offline"]:
                     print(f"Device recovered: {hostname} ({ip})")
+                    # Resolve the offline alarm so it auto-closes in the backend.
+                    send_event(
+                        hostname, ip, device_type,
+                        event_type="device_offline",
+                        description="Device has recovered and is responding to pings.",
+                        resolve=True,
+                    )
                 state["failed"] = 0
                 state["offline"] = False
                 send_heartbeat(hostname, ip, device_type)
-                send_passive_metrics(hostname, ip, device_type, rtt_ms)
+                send_passive_metrics(hostname, ip, device_type, rtt_ms, packet_loss_pct)
             else:
                 state["failed"] += 1
                 if state["failed"] >= OFFLINE_THRESHOLD and not state["offline"]:
                     print(f"Device offline detected: {hostname} ({ip})")
                     state["offline"] = True
-                    send_error_event(hostname, ip, device_type, "ping_failure", "Device failed ping threshold")
+                    send_event(
+                        hostname, ip, device_type,
+                        event_type="device_offline",
+                        description=f"Device did not respond to {OFFLINE_THRESHOLD} consecutive pings.",
+                        severity="high",
+                        group="IT Support",
+                    )
 
             device_state[ip] = state
 
