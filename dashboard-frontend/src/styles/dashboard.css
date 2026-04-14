@@ -537,8 +537,7 @@
   font-weight: 600;
 }
 
-.filter-group input,
-.filter-group select {
+.filter-group input {
   width: 100%;
   padding: 0.95rem 1rem;
   color: var(--text-primary);
@@ -554,10 +553,105 @@
 }
 
 .filter-group input:focus,
-.filter-group select:focus,
 .auth-form input:focus {
   border-color: rgba(103, 232, 249, 0.35);
   box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.12);
+}
+
+.custom-select {
+  position: relative;
+}
+
+.custom-select-trigger {
+  width: 100%;
+  min-height: 58px;
+  padding: 0.95rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  color: var(--text-primary);
+  background: rgba(148, 163, 184, 0.07);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 1rem;
+  outline: none;
+  cursor: pointer;
+  transition: 180ms ease;
+}
+
+.custom-select-trigger:hover:not(:disabled),
+.custom-select.is-open .custom-select-trigger,
+.custom-select-trigger:focus-visible {
+  border-color: rgba(103, 232, 249, 0.35);
+  box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.12);
+}
+
+.custom-select-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.custom-select-value {
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-select-chevron {
+  flex: 0 0 auto;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-right: 2px solid rgba(248, 251, 255, 0.78);
+  border-bottom: 2px solid rgba(248, 251, 255, 0.78);
+  transform: rotate(45deg) translateY(-1px);
+  transition: transform 180ms ease;
+}
+
+.custom-select.is-open .custom-select-chevron {
+  transform: rotate(-135deg) translateY(-1px);
+}
+
+.custom-select-menu {
+  position: absolute;
+  top: calc(100% + 0.6rem);
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.45rem;
+  background:
+    linear-gradient(180deg, rgba(12, 23, 42, 0.98) 0%, rgba(7, 17, 31, 0.98) 100%);
+  border: 1px solid rgba(103, 232, 249, 0.18);
+  border-radius: 1.1rem;
+  box-shadow: 0 24px 48px rgba(2, 8, 23, 0.42);
+  backdrop-filter: blur(18px);
+  z-index: 30;
+}
+
+.custom-select-option {
+  width: 100%;
+  padding: 0.8rem 0.9rem;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+  transition: 160ms ease;
+}
+
+.custom-select-option:hover,
+.custom-select-option:focus-visible {
+  color: var(--text-primary);
+  background: rgba(103, 232, 249, 0.14);
+  outline: none;
+}
+
+.custom-select-option.is-selected {
+  color: var(--text-primary);
+  background: linear-gradient(135deg, rgba(103, 232, 249, 0.2), rgba(8, 145, 178, 0.18));
 }
 
 .table-container {
