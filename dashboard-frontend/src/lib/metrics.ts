@@ -44,6 +44,24 @@ export const thresholdProfiles: Record<string, MetricDefinition[]> = {
       thresholds: { low: ">=200ms for 5min", medium: ">=500ms for 3min", high: ">=1000ms for 1min" },
     },
   ],
+  router: [
+    {
+      key: "packetLoss",
+      label: "Packet Loss",
+      unit: "%",
+      accent: "green",
+      aliases: ["packetloss", "packet_loss", "loss"],
+      thresholds: { low: ">=2% for 10min", medium: ">=5% for 5min", high: ">=10% for 2min" },
+    },
+    {
+      key: "latency",
+      label: "Latency",
+      unit: "ms",
+      accent: "green",
+      aliases: ["latency", "response_time", "ping", "round_trip_time"],
+      thresholds: { low: ">=120ms for 5min", medium: ">=250ms for 3min", high: ">=500ms for 1min" },
+    },
+  ],
   network: [
     {
       key: "cpuUsage",
@@ -149,6 +167,10 @@ export function getProfileKey(type?: string | null): string {
 
   if (["server", "workstation", "desktop", "laptop", "vm", "virtual machine"].some((value) => normalized.includes(value))) {
     return "compute";
+  }
+
+  if (normalized.includes("router")) {
+    return "router";
   }
 
   if (["router", "switch", "firewall", "access point", "wireless", "network"].some((value) => normalized.includes(value))) {
