@@ -183,8 +183,7 @@ func (s *AlarmService) EvaluateMetrics(deviceID uuid.UUID, _ models.DeviceType, 
 			continue
 		}
 		if item.Type == models.MetricPortStatus {
-			s.evaluatePortStatus(deviceID, item)
-			continue
+			continue // port_status is stored as a metric but never triggers alarms
 		}
 		rule, ok := metricRules[item.Type]
 		if !ok || len(rule.Tiers) == 0 {
@@ -335,8 +334,11 @@ func (s *AlarmService) createOrEscalate(name string, priority models.TicketPrior
 	alarm.Hyperlink = fmt.Sprintf("/api/v1/alarms/%s", alarm.ID)
 	_ = s.alarms.Update(alarm)
 
-	// New unique alarm → create incident + ticket.
-	s.createIncidentAndTicket(alarm, hasHistory)
+	// Only High-priority alarms automatically escalate to an incident + ticket.
+	// Low and Medium alarms stay as alarms until manually escalated.
+	if priority == models.PriorityHigh {
+		s.createIncidentAndTicket(alarm, hasHistory)
+	}
 }
 
 // createIncidentAndTicket opens a new Incident for the alarm, creates its Ticket,
@@ -585,8 +587,6 @@ func (s *AlarmService) checkOfflineDevices() {
 		if err := s.devices.UpdateStatus(device.ID, models.DeviceStatusOffline, time.Now()); err != nil {
 			log.Printf("offline check: UpdateStatus: %v", err)
 		}
-		deviceCopy := device
-		s.CreateOfflineAlarm(&deviceCopy)
 	}
 }
 

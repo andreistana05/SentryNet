@@ -260,11 +260,11 @@ def ping_device(ip):
 # used as the 'unit' field so the backend can name alarms like
 # "Port SSH(22) down (device:<id>)".
 _PORT_PROBES: dict[str, list[tuple[int, str]]] = {
-    "router":      [(22, "SSH(22)"), (23, "Telnet(23)"), (80, "HTTP(80)"), (443, "HTTPS(443)")],
-    "switch":      [(22, "SSH(22)"), (23, "Telnet(23)"), (80, "HTTP(80)")],
-    "server":      [(22, "SSH(22)"), (80, "HTTP(80)"), (443, "HTTPS(443)")],
-    "workstation": [(3389, "RDP(3389)"), (445, "SMB(445)")],
-    "printer":     [(9100, "JetDirect(9100)"), (80, "HTTP(80)")],
+    "router":  [(22, "SSH(22)"), (23, "Telnet(23)"), (80, "HTTP(80)"), (443, "HTTPS(443)")],
+    "switch":  [(22, "SSH(22)"), (23, "Telnet(23)"), (80, "HTTP(80)")],
+    "server":  [(22, "SSH(22)"), (80, "HTTP(80)"), (443, "HTTPS(443)")],
+    "printer": [(9100, "JetDirect(9100)"), (80, "HTTP(80)")],
+    # Workstations are not port-scanned — closed RDP/SMB is normal and not actionable.
 }
 
 
@@ -274,7 +274,7 @@ def check_device_ports(ip: str, device_type: str, timeout: float = 0.5) -> list[
     port_status metrics (value=1 up, value=0 down).  The port label is stored
     in 'unit' so the backend can build a meaningful per-port alarm name.
     """
-    probes = _PORT_PROBES.get(device_type, _PORT_PROBES["server"])
+    probes = _PORT_PROBES.get(device_type, [])
     metrics = []
     for port, label in probes:
         try:
@@ -380,13 +380,6 @@ def main():
             if alive:
                 if state["offline"]:
                     print(f"Device recovered: {hostname} ({ip})")
-                    # Resolve the offline alarm so it auto-closes in the backend.
-                    send_event(
-                        hostname, ip, device_type,
-                        event_type="device_offline",
-                        description="Device has recovered and is responding to pings.",
-                        resolve=True,
-                    )
                 state["failed"] = 0
                 state["offline"] = False
                 send_heartbeat(hostname, ip, device_type)
@@ -396,13 +389,6 @@ def main():
                 if state["failed"] >= OFFLINE_THRESHOLD and not state["offline"]:
                     print(f"Device offline detected: {hostname} ({ip})")
                     state["offline"] = True
-                    send_event(
-                        hostname, ip, device_type,
-                        event_type="device_offline",
-                        description=f"Device did not respond to {OFFLINE_THRESHOLD} consecutive pings.",
-                        severity="high",
-                        group="IT Support",
-                    )
 
             device_state[ip] = state
 
