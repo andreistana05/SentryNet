@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { clearStoredAuth, getStoredRole } from "../lib/storage";
+import { clearStoredAuth, getStoredUsername } from "../lib/storage";
 
 function Header() {
   const navigate = useNavigate();
-  const role = getStoredRole();
+  const username = getStoredUsername();
 
   const dateLabel = useMemo(() => {
     return new Intl.DateTimeFormat("en-US", {
@@ -39,7 +39,7 @@ function Header() {
           <strong>{timeLabel}</strong>
         </div>
 
-        <div className="role-pill">{role}</div>
+        <div className="role-pill">{username}</div>
 
         <button className="logout-btn" onClick={handleLogout} type="button">
           Logout

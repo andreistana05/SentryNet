@@ -79,12 +79,16 @@ export const handlers = [
   http.post(`${API_BASE_URL}/auth/login`, async ({ request }) => {
     const body = (await request.json()) as { email?: string; password?: string };
     if (body.email === "ops@sentrynet.local" && body.password === "secret") {
-      return HttpResponse.json({ token: "token-123", role: "Operator" });
+      return HttpResponse.json({
+        token: "token-123",
+        role: "Operator",
+        user: { username: "Network operator", role: "Operator" },
+      });
     }
 
     return HttpResponse.json({ error: "Login failed" }, { status: 401 });
   }),
   http.post(`${API_BASE_URL}/auth/register`, () =>
-    HttpResponse.json({ token: "token-456", user: { role: "Operator" } }),
+    HttpResponse.json({ token: "token-456", user: { username: "Network operator", role: "Operator" } }),
   ),
 ];

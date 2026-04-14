@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getApiErrorMessage } from "../lib/apiError";
-import { clearStoredAuth, setStoredRole, setStoredToken } from "../lib/storage";
+import { clearStoredAuth, setStoredRole, setStoredToken, setStoredUsername } from "../lib/storage";
 import type {
   Alarm,
   DashboardOverview,
@@ -70,6 +70,7 @@ export function useLoginMutation() {
     mutationFn: async (payload: LoginPayload) => {
       const response = await loginUser(payload);
       setStoredToken(response.token);
+      setStoredUsername(response.user?.username || response.username || payload.email.split("@")[0]);
       if (response.role) {
         setStoredRole(response.role);
       } else if (response.user?.role) {
@@ -88,6 +89,7 @@ export function useRegisterMutation() {
     mutationFn: async (payload: RegisterPayload) => {
       const response = await registerUser(payload);
       setStoredToken(response.token);
+      setStoredUsername(response.user?.username || response.username || payload.username);
       if (response.user?.role) {
         setStoredRole(response.user.role);
       } else if (response.role) {
