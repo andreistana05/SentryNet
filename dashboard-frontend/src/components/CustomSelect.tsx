@@ -18,16 +18,12 @@ function CustomSelect({ value, options, onChange, disabled = false, ariaLabel }:
   const buttonId = useId();
   const listboxId = `${buttonId}-listbox`;
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const isInteractive = !disabled && options.length > 0;
+  const isMenuOpen = isOpen && isInteractive;
 
   const selectedOption = useMemo(() => {
     return options.find((option) => option.value === value) ?? options[0] ?? null;
   }, [options, value]);
-
-  useEffect(() => {
-    if (disabled) {
-      setIsOpen(false);
-    }
-  }, [disabled]);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -52,7 +48,7 @@ function CustomSelect({ value, options, onChange, disabled = false, ariaLabel }:
   }, []);
 
   function handleToggle() {
-    if (disabled || !options.length) return;
+    if (!isInteractive) return;
     setIsOpen((current) => !current);
   }
 
@@ -62,13 +58,13 @@ function CustomSelect({ value, options, onChange, disabled = false, ariaLabel }:
   }
 
   return (
-    <div ref={rootRef} className={`custom-select ${isOpen ? "is-open" : ""} ${disabled ? "is-disabled" : ""}`}>
+    <div ref={rootRef} className={`custom-select ${isMenuOpen ? "is-open" : ""} ${disabled ? "is-disabled" : ""}`}>
       <button
         id={buttonId}
         type="button"
         className="custom-select-trigger"
         aria-haspopup="listbox"
-        aria-expanded={isOpen}
+        aria-expanded={isMenuOpen}
         aria-controls={listboxId}
         aria-label={ariaLabel}
         disabled={disabled}
@@ -78,7 +74,7 @@ function CustomSelect({ value, options, onChange, disabled = false, ariaLabel }:
         <span className="custom-select-chevron" aria-hidden="true" />
       </button>
 
-      {isOpen ? (
+      {isMenuOpen ? (
         <div className="custom-select-menu" role="listbox" id={listboxId} aria-labelledby={buttonId}>
           {options.map((option) => {
             const isSelected = option.value === value;
