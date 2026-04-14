@@ -46,6 +46,14 @@ export const thresholdProfiles: Record<string, MetricDefinition[]> = {
   ],
   router: [
     {
+      key: "interfaceUtilization",
+      label: "Interface Utilization",
+      unit: "%",
+      accent: "cyan",
+      aliases: ["interface", "bandwidth", "throughput", "interfaceutilization", "interface_usage"],
+      thresholds: { low: ">=70% for 15min", medium: ">=85% for 5min", high: ">=95% for 2min" },
+    },
+    {
       key: "packetLoss",
       label: "Packet Loss",
       unit: "%",

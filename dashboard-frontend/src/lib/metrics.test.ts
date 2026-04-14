@@ -20,11 +20,16 @@ describe("metrics profiles", () => {
     const payload: DeviceMetricsPayload = {
       metrics: [
         { name: "cpu_usage", value: 83, unit: "%", updatedAt: "2026-04-14T11:02:00.000Z" },
+        { name: "interface_usage", value: 61, unit: "%", updatedAt: "2026-04-14T11:02:00.000Z" },
         { name: "packet_loss", value: 0, unit: "%", updatedAt: "2026-04-14T11:02:00.000Z" },
         { name: "latency", value: 3.5, unit: "ms", updatedAt: "2026-04-14T11:02:00.000Z" },
       ],
     };
 
-    expect(buildMetricCards(device, payload).map((metric) => metric.label)).toEqual(["Packet Loss", "Latency"]);
+    expect(buildMetricCards(device, payload).map((metric) => metric.label)).toEqual([
+      "Interface Utilization",
+      "Packet Loss",
+      "Latency",
+    ]);
   });
 });
