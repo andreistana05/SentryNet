@@ -30,18 +30,20 @@ def collect_temperature():
                 ],
                 capture_output=True, text=True, timeout=5,
             )
+            logging.warning(f"[TEMP DEBUG] stdout={result.stdout!r} stderr={result.stderr!r}")
             for line in result.stdout.splitlines():
                 line = line.strip()
                 if not line:
                     continue
                 try:
                     celsius = (float(line) / 10.0) - 273.15
+                    logging.warning(f"[TEMP DEBUG] raw={line} celsius={celsius}")
                     if 0 < celsius < 150:
                         return round(celsius, 1)
                 except ValueError:
                     continue
-        except Exception:
-            pass
+        except Exception as e:
+            logging.warning(f"[TEMP DEBUG] exception: {e}")
 
     return None
 
