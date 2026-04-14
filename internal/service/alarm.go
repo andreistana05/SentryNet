@@ -232,13 +232,24 @@ func (s *AlarmService) evaluatePortStatus(deviceID uuid.UUID, item IngestMetricI
 	go s.createOrEscalate(alarmName, models.PriorityHigh, "Network Team")
 }
 
+// deviceLabel returns "hostname (ip)" for use in alarm names, falling back to
+// the raw UUID if the device cannot be found.
+func (s *AlarmService) deviceLabel(deviceID uuid.UUID) string {
+	device, err := s.devices.FindByID(deviceID)
+	if err != nil || device == nil {
+		return deviceID.String()
+	}
+	return fmt.Sprintf("%s (%s)", device.Name, device.IPAddress)
+}
+
 // evaluateMetric handles a single metric reading against a standard (ascending) rule.
 // inverse=true means the alarm fires when value is LOW (used for toner).
 func (s *AlarmService) evaluateMetric(deviceID uuid.UUID, item IngestMetricItem, rule MetricRule, inverse bool) {
 	key := deviceID.String() + ":" + string(item.Type)
-	alarmName := fmt.Sprintf("%s threshold exceeded (device:%s)", item.Type, deviceID)
+	label := s.deviceLabel(deviceID)
+	alarmName := fmt.Sprintf("%s threshold exceeded — %s", item.Type, label)
 	if inverse {
-		alarmName = fmt.Sprintf("%s low (device:%s)", item.Type, deviceID)
+		alarmName = fmt.Sprintf("%s low — %s", item.Type, label)
 	}
 
 	// Find the highest matching tier (worst condition).
