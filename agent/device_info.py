@@ -1,8 +1,15 @@
+import os
 import socket
 import platform
 
 
 def get_ip_address():
+    # Allow explicit override via env var (useful when Task Scheduler
+    # detects a Docker bridge IP instead of the real LAN IP)
+    override = os.getenv("AGENT_IP", "").strip()
+    if override:
+        return override
+
     try:
         # Connect to an external address (no data sent) to find the real outbound IP
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

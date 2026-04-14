@@ -2,7 +2,29 @@
   "permissions": {
     "allow": [
       "Bash(cd \"F:/facultate/SentryNet/SentryNet app\" && go mod tidy 2>&1)",
-      "Bash(cd \"F:/facultate/SentryNet/SentryNet app\" && go build ./... 2>&1)"
+      "Bash(cd \"F:/facultate/SentryNet/SentryNet app\" && go build ./... 2>&1)",
+      "Bash(docker exec:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker run:*)",
+      "Bash(docker cp:*)",
+      "Bash(docker --version)",
+      "Bash(docker info:*)",
+      "Bash(schtasks //end //tn \"SentryNet Agent\")",
+      "Bash(schtasks //run //tn \"SentryNet Agent\")",
+      "Bash(timeout 15 python main.py)",
+      "Bash(python -c ':*)",
+      "Bash(rm -f test_run.log)",
+      "Bash(pip install:*)",
+      "Bash(curl:*)",
+      "Bash(python -m pytest test_integration.py -v)",
+      "Bash(docker exec sentrynet-monitor-1:*)",
+      "Bash(python -c \"import psutil, requests; print\\('Python deps OK'\\)\")",
+      "Bash(python -c \"import sys,json; p=json.load\\(sys.stdin\\); print\\('React:', p.get\\('dependencies',{}\\).get\\('react','?'\\)\\); print\\('Scripts:', list\\(p.get\\('scripts',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash([ -d node_modules ])",
+      "Bash(go build:*)",
+      "Bash(ls -la .env*)",
+      "Bash(ls Dockerfile*)",
+      "Bash(docker inspect:*)"
     ]
   }
 }

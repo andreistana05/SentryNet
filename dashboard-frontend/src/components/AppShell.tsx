@@ -1,7 +1,13 @@
+import type { PropsWithChildren } from "react";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
+import type { DashboardStats } from "../types/domain";
 
-function AppShell({ children, stats }) {
+interface AppShellProps extends PropsWithChildren {
+  stats: DashboardStats;
+}
+
+function AppShell({ children, stats }: AppShellProps) {
   return (
     <div className="layout">
       <Sidebar

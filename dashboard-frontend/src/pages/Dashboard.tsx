@@ -1,35 +1,20 @@
-import {
-  startTransition,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { startTransition, useDeferredValue, useMemo, useState } from "react";
 import AppShell from "../components/AppShell";
-import MetricCard from "../components/MetricCard";
 import DeviceTable from "../components/DeviceTable";
-import API from "../services/api";
+import FleetStatusChart from "../components/FleetStatusChart";
+import MetricCard from "../components/MetricCard";
+import OperationsWorkloadChart from "../components/OperationsWorkloadChart";
+import { useDashboardOverview, useDevices, useOperations } from "../hooks/useDashboardData";
+import { buildStatusBreakdown, buildOperationsWorkload } from "../lib/charts";
+import { buildDashboardStats } from "../lib/dashboard";
+import { formatLastSeen, statusClassName } from "../lib/formatters";
+import type { Alarm, Device, Incident, Problem, Ticket } from "../types/domain";
 
-function formatLastSeen(lastSeen, now) {
-  if (!lastSeen) return "Never";
-
-  const diff = Math.max(0, Math.floor((now - new Date(lastSeen).getTime()) / 1000));
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-}
-
-function normalizeCollection(payload) {
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.items)) return payload.items;
-  return [];
-}
-
-function statusClassName(value) {
-  return String(value || "unknown").toLowerCase().replace(/\s+/g, "-");
-}
+const EMPTY_DEVICES: Device[] = [];
+const EMPTY_ALARMS: Alarm[] = [];
+const EMPTY_INCIDENTS: Incident[] = [];
+const EMPTY_TICKETS: Ticket[] = [];
+const EMPTY_PROBLEMS: Problem[] = [];
 
 function Dashboard() {
   const [filters, setFilters] = useState({
@@ -37,87 +22,26 @@ function Dashboard() {
     type: "all",
     query: "",
   });
-  const [devices, setDevices] = useState([]);
-  const [overview, setOverview] = useState(null);
-  const [operations, setOperations] = useState({
-    alarms: [],
-    incidents: [],
-    tickets: [],
-    problems: [],
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [dataError, setDataError] = useState("");
-  const [timeNow, setTimeNow] = useState(Date.now());
+  const [timeNow] = useState(() => Date.now());
 
-  useEffect(() => {
-    let isMounted = true;
+  const overviewQuery = useDashboardOverview();
+  const devicesQuery = useDevices();
+  const alarmsQuery = useOperations("alarms");
+  const incidentsQuery = useOperations("incidents");
+  const ticketsQuery = useOperations("tickets");
+  const problemsQuery = useOperations("problems");
 
-    async function loadDashboard() {
-      setIsLoading(true);
-      setDataError("");
-
-      try {
-        const [statusResponse, devicesResponse, alarmsResponse, incidentsResponse, ticketsResponse, problemsResponse] =
-          await Promise.allSettled([
-            API.get("/status"),
-            API.get("/devices"),
-            API.get("/alarms"),
-            API.get("/incidents"),
-            API.get("/tickets"),
-            API.get("/problems"),
-          ]);
-
-        if (!isMounted) return;
-
-        if (statusResponse.status === "fulfilled") {
-          setOverview(statusResponse.value.data);
-        }
-
-        if (devicesResponse.status === "fulfilled") {
-          setDevices(normalizeCollection(devicesResponse.value.data));
-        }
-
-        setOperations({
-          alarms: alarmsResponse.status === "fulfilled" ? normalizeCollection(alarmsResponse.value.data) : [],
-          incidents:
-            incidentsResponse.status === "fulfilled"
-              ? normalizeCollection(incidentsResponse.value.data)
-              : [],
-          tickets: ticketsResponse.status === "fulfilled" ? normalizeCollection(ticketsResponse.value.data) : [],
-          problems:
-            problemsResponse.status === "fulfilled" ? normalizeCollection(problemsResponse.value.data) : [],
-        });
-
-        if (statusResponse.status !== "fulfilled" && devicesResponse.status !== "fulfilled") {
-          setDataError("We couldn't load the latest infrastructure snapshot.");
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    loadDashboard();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      setTimeNow(Date.now());
-    }, 60000);
-
-    return () => window.clearInterval(interval);
-  }, []);
+  const devices = devicesQuery.data ?? EMPTY_DEVICES;
+  const alarms = alarmsQuery.data ?? EMPTY_ALARMS;
+  const incidents = incidentsQuery.data ?? EMPTY_INCIDENTS;
+  const tickets = ticketsQuery.data ?? EMPTY_TICKETS;
+  const problems = problemsQuery.data ?? EMPTY_PROBLEMS;
 
   const deferredQuery = useDeferredValue(filters.query);
 
   const availableTypes = useMemo(() => {
-    return Array.from(new Set(devices.map((device) => device.type).filter(Boolean))).sort(
-      (left, right) => left.localeCompare(right),
+    return Array.from(new Set(devices.map((device) => device.type).filter(Boolean))).sort((left, right) =>
+      left.localeCompare(right),
     );
   }, [devices]);
 
@@ -131,7 +55,7 @@ function Dashboard() {
         filters.type === "all" || String(device.type).toLowerCase() === filters.type;
       const matchesQuery =
         !normalizedQuery ||
-        [device.name, device.type, device.ip_address, device.status]
+        [device.name, device.type, device.ipAddress, device.status]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(normalizedQuery));
 
@@ -142,58 +66,68 @@ function Dashboard() {
   const tableDevices = useMemo(() => {
     return filteredDevices.map((device) => ({
       ...device,
-      ip: device.ip_address || "Unavailable",
-      lastSeen: formatLastSeen(device.last_seen, timeNow),
+      ip: device.ipAddress || "Unavailable",
+      lastSeenLabel: formatLastSeen(device.lastSeen, timeNow),
     }));
   }, [filteredDevices, timeNow]);
 
   const stats = useMemo(() => {
-    const totalDevices = overview?.devices?.total ?? devices.length;
-    const onlineDevices =
-      overview?.devices?.online ?? devices.filter((device) => device.status === "online").length;
-    const filtered = filteredDevices.length;
-    const healthyRatio = totalDevices ? Math.round((onlineDevices / totalDevices) * 100) : 0;
-
-    return {
-      totalDevices,
-      onlineDevices,
-      filtered,
-      healthyRatio,
-      activeAlerts: overview?.alarms?.open ?? operations.alarms.length,
-      openTickets: overview?.tickets?.open ?? operations.tickets.length,
-      openProblems: overview?.problems?.open ?? operations.problems.length,
-      openIncidents: overview?.incidents?.open ?? operations.incidents.length,
-    };
-  }, [devices, filteredDevices.length, operations, overview]);
+    return buildDashboardStats({
+      overview: overviewQuery.data,
+      devices,
+      filteredCount: filteredDevices.length,
+      alarms,
+      incidents,
+      tickets,
+      problems,
+    });
+  }, [alarms, devices, filteredDevices.length, incidents, overviewQuery.data, problems, tickets]);
 
   const metricCards = [
     {
       title: "Open Alarms",
       value: stats.activeAlerts,
       label: "Threshold breaches or correlated signals awaiting operational handling",
-      accent: "rose",
+      accent: "rose" as const,
     },
     {
       title: "Open Incidents",
       value: stats.openIncidents,
       label: "Non-duplicate alarms promoted into incident response",
-      accent: "amber",
+      accent: "amber" as const,
     },
     {
       title: "Active Tickets",
       value: stats.openTickets,
       label: "Engineer-owned work items moving incidents toward closure",
-      accent: "cyan",
+      accent: "cyan" as const,
     },
     {
       title: "Problem Records",
       value: stats.openProblems,
       label: "Recurring patterns escalated into root-cause investigation",
-      accent: "green",
+      accent: "green" as const,
     },
   ];
 
-  function updateFilter(key, value) {
+  const isLoading = [
+    overviewQuery.isLoading,
+    devicesQuery.isLoading,
+    alarmsQuery.isLoading,
+    incidentsQuery.isLoading,
+    ticketsQuery.isLoading,
+    problemsQuery.isLoading,
+  ].some(Boolean);
+
+  const dataError =
+    overviewQuery.isError && devicesQuery.isError
+      ? "We couldn't load the latest infrastructure snapshot."
+      : "";
+
+  const statusChartData = useMemo(() => buildStatusBreakdown(devices, stats), [devices, stats]);
+  const workloadChartData = useMemo(() => buildOperationsWorkload(stats), [stats]);
+
+  function updateFilter(key: "status" | "type" | "query", value: string) {
     startTransition(() => {
       setFilters((current) => ({ ...current, [key]: value }));
     });
@@ -241,6 +175,11 @@ function Dashboard() {
         ))}
       </section>
 
+      <section className="chart-grid">
+        <FleetStatusChart data={statusChartData} loading={isLoading} />
+        <OperationsWorkloadChart data={workloadChartData} loading={isLoading} />
+      </section>
+
       <section className="control-surface">
         <div className="control-copy">
           <span className="eyebrow">Fleet Explorer</span>
@@ -278,10 +217,7 @@ function Dashboard() {
 
           <label className="filter-group">
             <span>Type</span>
-            <select
-              value={filters.type}
-              onChange={(event) => updateFilter("type", event.target.value)}
-            >
+            <select value={filters.type} onChange={(event) => updateFilter("type", event.target.value)}>
               <option value="all">All types</option>
               {availableTypes.map((type) => (
                 <option key={type} value={String(type).toLowerCase()}>
@@ -310,21 +246,45 @@ function Dashboard() {
         </div>
 
         <div className="queue-grid">
-          {["alarms", "incidents", "tickets", "problems"].map((group) => (
+          {(
+            [
+              { key: "alarms", items: alarms },
+              { key: "incidents", items: incidents },
+              { key: "tickets", items: tickets },
+              { key: "problems", items: problems },
+            ] as const
+          ).map(({ key: group, items }) => (
             <div key={group} className="queue-column">
               <h4>{group}</h4>
-              {(operations[group] ?? []).slice(0, 3).map((item, index) => (
-                <div key={item.id ?? `${group}-${index}`} className="queue-card">
-                  <div className="queue-card-top">
-                    <strong>{item.id ?? "Unlinked"}</strong>
-                    <span className={`status-badge ${statusClassName(item.status)}`}>
-                      {item.status ?? "unknown"}
-                    </span>
+              {items.slice(0, 3).map((item, index) => {
+                const raw = item as Record<string, unknown>;
+                const displayId =
+                  raw.alarm_number ??
+                  raw.incident_number ??
+                  raw.ticket_number ??
+                  raw.problem_number ??
+                  item.id ??
+                  "Unlinked";
+                const displayTitle =
+                  (raw.alarm as string | undefined) ??
+                  (raw.description as string | undefined) ??
+                  (raw.alarm_name as string | undefined) ??
+                  item.title ??
+                  item.name ??
+                  "Untitled record";
+                return (
+                  <div key={item.id ?? `${group}-${index}`} className="queue-card">
+                    <div className="queue-card-top">
+                      <strong>{String(displayId)}</strong>
+                      <span className={`status-badge ${statusClassName(item.status)}`}>
+                        {String(item.status ?? "unknown")}
+                      </span>
+                    </div>
+                    <p>{String(displayTitle)}</p>
                   </div>
-                  <p>{item.title ?? item.name ?? "Untitled record"}</p>
-                </div>
-              ))}
-              {operations[group]?.length ? null : (
+                );
+              })}
+              {items.length ? null : (
                 <div className="queue-card">
                   <p>No {group} are currently available.</p>
                 </div>

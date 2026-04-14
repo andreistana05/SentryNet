@@ -47,6 +47,8 @@ func (h *StatusHandler) Overview(c *gin.Context) {
 	}
 
 	openIncidents, _ := h.alarms.ListIncidents(repository.IncidentFilter{Status: models.StatusOpen, Limit: 1000})
+	openTickets, _ := h.alarms.ListTickets(repository.TicketFilter{Status: models.StatusOpen, Limit: 1000})
+	openProblems, _ := h.alarms.ListProblems(repository.ProblemFilter{Status: models.StatusOpen, Limit: 1000})
 
 	c.JSON(http.StatusOK, gin.H{
 		"devices": gin.H{
@@ -61,6 +63,12 @@ func (h *StatusHandler) Overview(c *gin.Context) {
 		},
 		"incidents": gin.H{
 			"open": len(openIncidents),
+		},
+		"tickets": gin.H{
+			"open": len(openTickets),
+		},
+		"problems": gin.H{
+			"open": len(openProblems),
 		},
 	})
 }

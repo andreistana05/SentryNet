@@ -1,31 +1,26 @@
-import { useState } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import API from "../services/api";
+import { getMutationErrorMessage, useRegisterMutation } from "../hooks/useDashboardData";
 
 function Register() {
   const [form, setForm] = useState({ username: "", email: "", password: "" });
   const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const registerMutation = useRegisterMutation();
 
-  const handleChange = (event) => {
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
-  const handleRegister = async (event) => {
+  const handleRegister = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
-    setIsSubmitting(true);
 
     try {
-      const response = await API.post("/auth/register", form);
-      localStorage.setItem("token", response.data.token);
-      if (response.data.user?.role) localStorage.setItem("role", response.data.user.role);
+      await registerMutation.mutateAsync(form);
       navigate("/dashboard");
-    } catch (err) {
-      setError(err.response?.data?.error || "Registration failed");
-    } finally {
-      setIsSubmitting(false);
+    } catch (mutationError) {
+      setError(getMutationErrorMessage(mutationError, "Registration failed"));
     }
   };
 
@@ -105,8 +100,8 @@ function Register() {
               />
             </label>
 
-            <button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating account..." : "Register"}
+            <button type="submit" disabled={registerMutation.isPending}>
+              {registerMutation.isPending ? "Creating account..." : "Register"}
             </button>
           </form>
 

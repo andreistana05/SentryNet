@@ -1,4 +1,27 @@
-function OperationsTable({ title, eyebrow, items, columns, emptyMessage }) {
+import type { ReactNode } from "react";
+import type { OperationRecord } from "../types/domain";
+
+export interface OperationsTableColumn<T extends OperationRecord> {
+  key: string;
+  label: string;
+  render?: (value: unknown, item: T) => ReactNode;
+}
+
+interface OperationsTableProps<T extends OperationRecord> {
+  title: string;
+  eyebrow: string;
+  items: T[];
+  columns: OperationsTableColumn<T>[];
+  emptyMessage: string;
+}
+
+function OperationsTable<T extends OperationRecord>({
+  title,
+  eyebrow,
+  items,
+  columns,
+  emptyMessage,
+}: OperationsTableProps<T>) {
   const hasItems = items.length > 0;
 
   return (
@@ -30,10 +53,14 @@ function OperationsTable({ title, eyebrow, items, columns, emptyMessage }) {
 
             <tbody>
               {items.map((item) => (
-                <tr key={item.id}>
+                <tr key={String(item.id)}>
                   {columns.map((column) => (
                     <td key={column.key}>
-                      {column.render ? column.render(item[column.key], item) : item[column.key]}
+                      {column.render
+                        ? column.render(item[column.key], item)
+                        : typeof item[column.key] === "string" || typeof item[column.key] === "number"
+                          ? String(item[column.key])
+                          : "--"}
                     </td>
                   ))}
                 </tr>

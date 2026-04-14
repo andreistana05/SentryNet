@@ -37,7 +37,7 @@ func New(services *service.Services, cfg *config.Config) *gin.Engine {
 	authH := handler.NewAuthHandler(services.Auth)
 	deviceH := handler.NewDeviceHandler(services.Device, services.Metric)
 	alarmH := handler.NewAlarmHandler(services.Alarm)
-	ingestH := handler.NewIngestHandler(services.Device, services.Metric)
+	ingestH := handler.NewIngestHandler(services.Device, services.Metric, services.Alarm)
 	statusH := handler.NewStatusHandler(services.Device, services.Alarm)
 
 	api := r.Group("/api/v1")
@@ -56,6 +56,7 @@ func New(services *service.Services, cfg *config.Config) *gin.Engine {
 		ingest.GET("/devices", ingestH.Devices)
 		ingest.POST("/metrics", ingestH.Metrics)
 		ingest.POST("/heartbeat", ingestH.Heartbeat)
+		ingest.POST("/event", ingestH.Event)
 	}
 
 	// Protected routes — require JWT
@@ -101,9 +102,8 @@ func New(services *service.Services, cfg *config.Config) *gin.Engine {
 			problems.PUT("/:id/close", alarmH.CloseProblem)
 		}
 
-		// Tickets — admin only
+		// Tickets
 		tickets := protected.Group("/tickets")
-		tickets.Use(middleware.RequireRole("admin"))
 		{
 			tickets.GET("", alarmH.ListTickets)
 			tickets.GET("/:id", alarmH.GetTicket)

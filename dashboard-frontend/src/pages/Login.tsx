@@ -1,28 +1,23 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import API from "../services/api";
+import { getMutationErrorMessage, useLoginMutation } from "../hooks/useDashboardData";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const loginMutation = useLoginMutation();
 
-  const handleLogin = async (event) => {
+  const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
-    setIsSubmitting(true);
 
     try {
-      const response = await API.post("/auth/login", { email, password });
-      localStorage.setItem("token", response.data.token);
-      if (response.data.role) localStorage.setItem("role", response.data.role);
+      await loginMutation.mutateAsync({ email, password });
       navigate("/dashboard");
-    } catch (err) {
-      setError(err.response?.data?.error || "Login failed");
-    } finally {
-      setIsSubmitting(false);
+    } catch (mutationError) {
+      setError(getMutationErrorMessage(mutationError, "Login failed"));
     }
   };
 
@@ -88,8 +83,8 @@ function Login() {
               />
             </label>
 
-            <button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Signing in..." : "Login"}
+            <button type="submit" disabled={loginMutation.isPending}>
+              {loginMutation.isPending ? "Signing in..." : "Login"}
             </button>
           </form>
 

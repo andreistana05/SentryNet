@@ -26,6 +26,7 @@ const (
 // When a new unique alarm fires, an Incident is created. Duplicate active alarms are escalated.
 type Alarm struct {
 	ID               uuid.UUID      `gorm:"type:uuid;primaryKey"                        json:"id"`
+	AlarmNumber      string         `gorm:"not null;size:20;uniqueIndex"                json:"alarm_number"`
 	Alarm            string         `gorm:"not null;size:255"                           json:"alarm"`
 	Hyperlink        string         `gorm:"size:500"                                    json:"hyperlink"`
 	Status           TicketStatus   `gorm:"type:varchar(20);not null;default:'Open'"    json:"status"`

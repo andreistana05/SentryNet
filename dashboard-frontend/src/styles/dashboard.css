@@ -378,6 +378,65 @@
   gap: 1rem;
 }
 
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.chart-panel {
+  min-height: 420px;
+}
+
+.chart-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(220px, 0.8fr);
+  gap: 1rem;
+  align-items: center;
+}
+
+.chart-canvas {
+  position: relative;
+  z-index: 1;
+  min-height: 280px;
+  width: 100%;
+}
+
+.chart-canvas-bar {
+  min-height: 320px;
+}
+
+.chart-legend {
+  display: grid;
+  gap: 0.8rem;
+  position: relative;
+  z-index: 1;
+}
+
+.chart-legend-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: rgba(148, 163, 184, 0.05);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 1rem;
+}
+
+.chart-legend-row span,
+.chart-legend-row strong {
+  position: relative;
+  z-index: 1;
+}
+
+.chart-legend-swatch {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 999px;
+  box-shadow: 0 0 18px currentColor;
+}
+
 .metric-card {
   position: relative;
   display: grid;
@@ -1017,7 +1076,9 @@
   .hero-panel,
   .control-surface,
   .auth-shell,
-  .workflow-grid {
+  .workflow-grid,
+  .chart-grid,
+  .chart-shell {
     grid-template-columns: 1fr;
   }
 
