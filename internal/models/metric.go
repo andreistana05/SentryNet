@@ -30,7 +30,7 @@ type Metric struct {
 	Device    *Device    `gorm:"foreignKey:DeviceID" json:"device,omitempty"`
 	Type      MetricType `gorm:"type:varchar(50);not null;index" json:"type"`
 	Value     float64    `gorm:"not null" json:"value"`
-	Unit      string     `gorm:"size:20" json:"unit"`
+	Unit      string     `gorm:"size:64" json:"unit"`
 	Timestamp time.Time  `gorm:"not null;index" json:"timestamp"`
 }
 
