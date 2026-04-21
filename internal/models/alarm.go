@@ -11,9 +11,16 @@ type TicketStatus string
 type TicketPriority string
 
 const (
-	StatusOpen       TicketStatus = "Open"
-	StatusInProgress TicketStatus = "In Progress"
-	StatusClosed     TicketStatus = "Closed"
+	StatusOpen              TicketStatus = "Open"
+	StatusInProgress        TicketStatus = "In Progress"
+	StatusClosed            TicketStatus = "Closed"
+	StatusAssigned          TicketStatus = "assigned"
+	StatusInProgressTicket  TicketStatus = "in-progress"
+	StatusAwaitingVendor    TicketStatus = "awaiting-vendor"
+	StatusMitigating        TicketStatus = "mitigating"
+	StatusRootCauseAnalysis TicketStatus = "root-cause-analysis"
+	StatusResolved          TicketStatus = "resolved"
+	StatusClosedTicket      TicketStatus = "closed"
 )
 
 const (
@@ -145,6 +152,22 @@ type TicketUpdate struct {
 func (u *TicketUpdate) BeforeCreate(_ *gorm.DB) error {
 	if u.ID == uuid.Nil {
 		u.ID = uuid.New()
+	}
+	return nil
+}
+
+// TicketNote is a free-text comment left by an operator on a Ticket.
+type TicketNote struct {
+	ID         uuid.UUID `gorm:"type:uuid;primaryKey"              json:"id"`
+	TicketID   uuid.UUID `gorm:"type:uuid;not null;index"           json:"ticketId"`
+	Body       string    `gorm:"not null;type:text"                 json:"body"`
+	AuthorName string    `gorm:"not null;size:255"                  json:"authorName"`
+	CreatedAt  time.Time `gorm:"not null;autoCreateTime"            json:"createdAt"`
+}
+
+func (n *TicketNote) BeforeCreate(_ *gorm.DB) error {
+	if n.ID == uuid.Nil {
+		n.ID = uuid.New()
 	}
 	return nil
 }

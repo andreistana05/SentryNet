@@ -774,3 +774,57 @@ func (s *AlarmService) GetTicketByNumber(number string) (*models.Ticket, error) 
 	}
 	return ticket, nil
 }
+
+var validTicketStatuses = map[models.TicketStatus]bool{
+	models.StatusOpen:              true,
+	models.StatusInProgress:        true,
+	models.StatusClosed:            true,
+	models.StatusAssigned:          true,
+	models.StatusInProgressTicket:  true,
+	models.StatusAwaitingVendor:    true,
+	models.StatusMitigating:        true,
+	models.StatusRootCauseAnalysis: true,
+	models.StatusResolved:          true,
+	models.StatusClosedTicket:      true,
+}
+
+func (s *AlarmService) UpdateTicketStatus(id uuid.UUID, status models.TicketStatus) (*models.Ticket, error) {
+	if !validTicketStatuses[status] {
+		return nil, errors.New("invalid status value")
+	}
+	ticket, err := s.GetTicket(id)
+	if err != nil {
+		return nil, err
+	}
+	ticket.Status = status
+	if err := s.tickets.Update(ticket); err != nil {
+		return nil, err
+	}
+	u := &models.TicketUpdate{
+		TicketID:    ticket.ID,
+		EventType:   models.EventStatusChanged,
+		Description: fmt.Sprintf("Status changed to %s", status),
+	}
+	_ = s.tickets.AddUpdate(u)
+	return ticket, nil
+}
+
+func (s *AlarmService) GetTicketNotes(ticketID uuid.UUID) ([]models.TicketNote, error) {
+	notes, err := s.tickets.FindNotesByTicketID(ticketID)
+	if err != nil {
+		return nil, err
+	}
+	return notes, nil
+}
+
+func (s *AlarmService) CreateTicketNote(ticketID uuid.UUID, body, authorName string) (*models.TicketNote, error) {
+	note := &models.TicketNote{
+		TicketID:   ticketID,
+		Body:       body,
+		AuthorName: authorName,
+	}
+	if err := s.tickets.CreateNote(note); err != nil {
+		return nil, err
+	}
+	return note, nil
+}

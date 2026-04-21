@@ -24,7 +24,9 @@
       "Bash(go build:*)",
       "Bash(ls -la .env*)",
       "Bash(ls Dockerfile*)",
-      "Bash(docker inspect:*)"
+      "Bash(docker inspect:*)",
+      "Bash(find \"F:/facultate/SentryNet/SentryNet app\" -type f -name \"*.go\" | xargs grep -l \"ticket\" -i)",
+      "Bash(docker ps:*)"
     ]
   }
 }

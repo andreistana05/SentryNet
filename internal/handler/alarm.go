@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"sentrynet/backend/internal/middleware"
 	"sentrynet/backend/internal/models"
 	"sentrynet/backend/internal/repository"
 	"sentrynet/backend/internal/service"
@@ -300,6 +301,86 @@ func (h *AlarmHandler) ListTickets(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": tickets, "count": len(tickets)})
+}
+
+// UpdateTicketStatus godoc
+// PATCH /api/v1/tickets/:id/status
+func (h *AlarmHandler) UpdateTicketStatus(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ticket id"})
+		return
+	}
+
+	var req struct {
+		Status string `json:"status" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ticket, err := h.svc.UpdateTicketStatus(id, models.TicketStatus(req.Status))
+	if err != nil {
+		if errors.Is(err, service.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "ticket not found"})
+			return
+		}
+		if err.Error() == "invalid status value" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, ticket)
+}
+
+// GetTicketNotes godoc
+// GET /api/v1/tickets/:id/notes
+func (h *AlarmHandler) GetTicketNotes(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ticket id"})
+		return
+	}
+	notes, err := h.svc.GetTicketNotes(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": notes, "count": len(notes)})
+}
+
+// CreateTicketNote godoc
+// POST /api/v1/tickets/:id/notes
+func (h *AlarmHandler) CreateTicketNote(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ticket id"})
+		return
+	}
+
+	var req struct {
+		Body string `json:"body" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	claims := middleware.GetClaims(c)
+	authorName := "Operator"
+	if claims != nil && claims.Username != "" {
+		authorName = claims.Username
+	}
+
+	note, err := h.svc.CreateTicketNote(id, req.Body, authorName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, note)
 }
 
 // GetTicket godoc
