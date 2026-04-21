@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { clearStoredAuth, getStoredUsername } from "../lib/storage";
+import ThemeToggle from "./ThemeToggle";
 
 function Header() {
   const navigate = useNavigate();
@@ -38,6 +39,8 @@ function Header() {
           <span>{dateLabel}</span>
           <strong>{timeLabel}</strong>
         </div>
+
+        <ThemeToggle />
 
         <div className="role-pill">{username}</div>
 
