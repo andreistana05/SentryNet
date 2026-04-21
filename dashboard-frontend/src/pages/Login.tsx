@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import ThemeToggle from "../components/ThemeToggle";
 import { getMutationErrorMessage, useLoginMutation } from "../hooks/useDashboardData";
 
 function Login() {
@@ -27,6 +28,18 @@ function Login() {
       <div className="auth-ambient auth-ambient-right" />
 
       <section className="auth-shell">
+        <div className="auth-topbar">
+          <div className="auth-brand">
+            <div className="brand-mark">SN</div>
+            <div>
+              <span className="eyebrow">Mission Control</span>
+              <strong>SentryNet</strong>
+            </div>
+          </div>
+
+          <ThemeToggle />
+        </div>
+
         <div className="auth-showcase">
           <span className="eyebrow">Operational Awareness</span>
           <h1>See the health of your infrastructure before issues spread.</h1>
@@ -43,10 +56,6 @@ function Login() {
             <div>
               <strong>Alert-first workflow</strong>
               <span>Surface operational risk without hunting across screens.</span>
-            </div>
-            <div>
-              <strong>Polished control center</strong>
-              <span>Designed to feel focused on both desktop and smaller screens.</span>
             </div>
           </div>
         </div>

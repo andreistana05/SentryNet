@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import ThemeToggle from "../components/ThemeToggle";
 import { getMutationErrorMessage, useRegisterMutation } from "../hooks/useDashboardData";
 
 function Register() {
@@ -30,6 +31,18 @@ function Register() {
       <div className="auth-ambient auth-ambient-right" />
 
       <section className="auth-shell">
+        <div className="auth-topbar">
+          <div className="auth-brand">
+            <div className="brand-mark">SN</div>
+            <div>
+              <span className="eyebrow">Mission Control</span>
+              <strong>SentryNet</strong>
+            </div>
+          </div>
+
+          <ThemeToggle />
+        </div>
+
         <div className="auth-showcase">
           <span className="eyebrow">Launch Secure Monitoring</span>
           <h1>Bring your team into a dashboard that feels purpose-built for operations.</h1>
@@ -46,10 +59,6 @@ function Register() {
             <div>
               <strong>Immediate onboarding</strong>
               <span>Register and move straight into the live dashboard experience.</span>
-            </div>
-            <div>
-              <strong>Built to scale</strong>
-              <span>Works well as your monitored device inventory grows.</span>
             </div>
           </div>
         </div>

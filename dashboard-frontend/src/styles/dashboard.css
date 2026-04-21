@@ -1160,7 +1160,7 @@
   display: grid;
   place-items: center;
   min-height: 100vh;
-  padding: 2rem;
+  padding: 1.25rem;
   overflow: hidden;
 }
 
@@ -1168,9 +1168,35 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 460px);
-  gap: 1.25rem;
-  width: min(1120px, 100%);
+  grid-template-columns: minmax(0, 1.16fr) minmax(420px, 500px);
+  grid-template-areas:
+    "topbar topbar"
+    "showcase card";
+  gap: 1rem 1.1rem;
+  align-items: stretch;
+  width: min(1320px, 100%);
+}
+
+.auth-topbar {
+  grid-area: topbar;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.25rem 0.25rem 0;
+}
+
+.auth-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.auth-brand strong {
+  display: block;
+  margin-top: -0.45rem;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.1rem;
 }
 
 .auth-ambient {
@@ -1196,30 +1222,33 @@
 
 .auth-showcase,
 .auth-card {
-  padding: clamp(1.5rem, 3vw, 2.2rem);
+  padding: clamp(1.5rem, 2.4vw, 2rem);
 }
 
 .auth-showcase {
+  grid-area: showcase;
   display: grid;
-  align-content: center;
+  align-content: start;
+  min-height: 0;
 }
 
 .auth-showcase h1 {
-  font-size: clamp(2.4rem, 5vw, 4.8rem);
-  line-height: 0.95;
-  max-width: 10ch;
+  font-size: clamp(2.3rem, 4.6vw, 4.4rem);
+  line-height: 0.92;
+  max-width: 11ch;
 }
 
 .auth-feature-list {
   display: grid;
-  gap: 1rem;
-  margin-top: 2rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-top: 1.35rem;
 }
 
 .auth-feature-list div {
   display: grid;
   gap: 0.35rem;
-  padding: 1rem 1.1rem;
+  padding: 0.95rem 1rem;
   border-radius: 1.15rem;
   background: rgba(148, 163, 184, 0.06);
   border: 1px solid rgba(148, 163, 184, 0.12);
@@ -1230,11 +1259,14 @@
 }
 
 .auth-card {
+  grid-area: card;
   align-self: center;
+  max-width: 500px;
+  width: 100%;
 }
 
 .auth-card-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.35rem;
 }
 
 .auth-form {
@@ -1253,7 +1285,7 @@
 }
 
 .auth-form input {
-  padding: 1rem;
+  padding: 1.05rem 1rem;
   color: var(--text-primary);
   background: rgba(148, 163, 184, 0.07);
   border: 1px solid rgba(148, 163, 184, 0.15);
@@ -1264,7 +1296,7 @@
 
 .auth-form button {
   margin-top: 0.35rem;
-  padding: 1rem 1.2rem;
+  padding: 1.05rem 1.2rem;
   color: var(--auth-button-text);
   background: linear-gradient(135deg, #67e8f9, #fbbf24);
   font-weight: 800;
@@ -1340,7 +1372,7 @@
 }
 
 .auth-switch {
-  margin-top: 1.25rem;
+  margin-top: 1rem;
   color: var(--text-secondary);
 }
 
@@ -1383,6 +1415,18 @@
 }
 
 @media (max-width: 1080px) {
+  .auth-shell {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "topbar"
+      "showcase"
+      "card";
+  }
+
+  .auth-topbar {
+    padding: 0;
+  }
+
   .sidebar {
     width: min(290px, calc(100vw - 1.5rem));
   }
@@ -1415,7 +1459,6 @@
 
   .hero-panel,
   .control-surface,
-  .auth-shell,
   .workflow-grid,
   .chart-grid,
   .chart-shell {
@@ -1435,6 +1478,23 @@
   .main-content,
   .auth-page {
     padding: 1rem;
+  }
+
+  .auth-topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .auth-brand {
+    justify-content: center;
+  }
+
+  .auth-topbar .theme-toggle {
+    justify-content: center;
+  }
+
+  .auth-feature-list {
+    grid-template-columns: 1fr;
   }
 
   .main-content {
