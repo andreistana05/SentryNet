@@ -40,3 +40,5 @@ config.json
 *.tmp
 
 .github/
+
+.codex

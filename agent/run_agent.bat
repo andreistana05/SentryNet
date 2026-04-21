@@ -1,13 +1,8 @@
 @echo off
 REM ── SentryNet Agent ─────────────────────────────────────────────────────────
-REM  Edit BACKEND_URL to point to the machine running the backend, then set up
-REM  this file in Windows Task Scheduler to run at system startup.
+REM  Edit config.py to set the backend URL, ingest API key, and intervals.
+REM  Set up this file in Windows Task Scheduler to run at system startup.
 REM ───────────────────────────────────────────────────────────────────────────
-
-for /f %%i in ('python "%~dp0get_host_ip.py"') do set BACKEND_URL=http://%%i:8080
-set INGEST_API_KEY=sk-infrapulse-7f3Kx9mQpL2wNvR8dYcT4jZbHnUeA6sW
-set METRICS_INTERVAL=10
-set HEARTBEAT_INTERVAL=30
 
 cd /d "%~dp0"
 
