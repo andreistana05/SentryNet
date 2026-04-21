@@ -66,6 +66,14 @@ export const incidentSchema = operationRecordSchema;
 export const ticketSchema = operationRecordSchema;
 export const problemSchema = operationRecordSchema;
 
+export const ticketNoteSchema = z.object({
+  id: idSchema,
+  ticketId: idSchema,
+  body: z.string().catch(""),
+  authorName: z.string().catch("Operator"),
+  createdAt: z.string().catch(""),
+});
+
 export const deviceMetricsSchema = z
   .object({
     metrics: z.unknown().optional(),

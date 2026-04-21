@@ -929,6 +929,12 @@
   background: rgba(103, 232, 249, 0.14);
 }
 
+.ticket-notes-toggle.is-active {
+  color: var(--text-primary);
+  background: rgba(103, 232, 249, 0.18);
+  border-color: rgba(103, 232, 249, 0.3);
+}
+
 .ticket-status-editor {
   display: grid;
   gap: 0.45rem;
@@ -1006,6 +1012,130 @@
   color: var(--text-primary);
   background: var(--dropdown-option-selected);
   outline: none;
+}
+
+.ticket-notes-composer,
+.ticket-note-composer {
+  position: relative;
+}
+
+.ticket-note-composer {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.ticket-note-history {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.ticket-note-list {
+  display: grid;
+  gap: 0.65rem;
+  max-height: 10rem;
+  overflow-y: auto;
+  padding-right: 0.15rem;
+}
+
+.ticket-note-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.8rem 0.9rem;
+  background: rgba(148, 163, 184, 0.06);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 0.95rem;
+}
+
+.ticket-note-card p {
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.ticket-note-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ticket-note-meta strong {
+  font-size: 0.9rem;
+}
+
+.ticket-note-meta span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.ticket-note-composer label {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.ticket-note-composer label span {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.ticket-note-composer textarea {
+  width: 100%;
+  min-height: 9rem;
+  resize: vertical;
+  padding: 1rem;
+  color: var(--text-primary);
+  background: var(--field-bg);
+  border: 1px solid var(--field-border);
+  border-radius: 1rem;
+  outline: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.ticket-note-composer textarea:focus {
+  border-color: rgba(103, 232, 249, 0.35);
+  box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.12);
+}
+
+.ticket-note-composer textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.ticket-note-submit {
+  justify-self: end;
+}
+
+.ticket-note-popup {
+  position: fixed;
+  z-index: 130;
+  padding: 1rem;
+  background: var(--dropdown-bg);
+  border: 1px solid var(--dropdown-border);
+  border-radius: 1.2rem;
+  box-shadow: var(--dropdown-shadow);
+  backdrop-filter: blur(18px);
+  transform-origin: bottom right;
+}
+
+.ticket-note-popup-header {
+  margin-bottom: 0.85rem;
+}
+
+.ticket-note-popup-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.ticket-note-popup-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ticket-note-cancel {
+  margin-top: 0;
 }
 
 .sr-only {
@@ -1567,6 +1697,7 @@
   .metrics-filters {
     grid-template-columns: 1fr;
   }
+
 }
 
 @media (max-width: 720px) {

@@ -8,9 +8,11 @@ import {
   overviewSchema,
   problemSchema,
   ticketSchema,
+  ticketNoteSchema,
 } from "../lib/schemas";
 import type {
   Alarm,
+  CreateTicketNotePayload,
   DashboardOverview,
   Device,
   DeviceMetricsPayload,
@@ -18,16 +20,18 @@ import type {
   OperationType,
   Problem,
   Ticket,
+  TicketNote,
   TicketStatus,
   UpdateTicketStatusPayload,
 } from "../types/domain";
-import { getValidated, patchValidated } from "./api";
+import { getValidated, patchValidated, postValidated } from "./api";
 
 const devicesEnvelopeSchema = collectionEnvelopeSchema(deviceSchema);
 const alarmsEnvelopeSchema = collectionEnvelopeSchema(alarmSchema);
 const incidentsEnvelopeSchema = collectionEnvelopeSchema(incidentSchema);
 const ticketsEnvelopeSchema = collectionEnvelopeSchema(ticketSchema);
 const problemsEnvelopeSchema = collectionEnvelopeSchema(problemSchema);
+const ticketNotesEnvelopeSchema = collectionEnvelopeSchema(ticketNoteSchema);
 
 export const TICKET_STATUS_OPTIONS: TicketStatus[] = [
   "assigned",
@@ -78,4 +82,16 @@ export async function updateTicketStatus(
   // This is the single backend integration point for inline ticket updates.
   // If the API uses a different route or request body, update it here.
   return patchValidated(`/tickets/${ticketId}/status`, payload, ticketSchema);
+}
+
+export async function getTicketNotes(ticketId: string | number): Promise<TicketNote[]> {
+  const payload = await getValidated(`/tickets/${ticketId}/notes`, ticketNotesEnvelopeSchema);
+  return extractCollection(payload);
+}
+
+export async function createTicketNote(
+  ticketId: string | number,
+  payload: CreateTicketNotePayload,
+): Promise<TicketNote> {
+  return postValidated(`/tickets/${ticketId}/notes`, payload, ticketNoteSchema);
 }

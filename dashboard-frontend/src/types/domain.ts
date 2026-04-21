@@ -73,6 +73,18 @@ export interface UpdateTicketStatusPayload {
   status: TicketStatus;
 }
 
+export interface TicketNote {
+  id: string | number;
+  ticketId: string | number;
+  body: string;
+  authorName: string;
+  createdAt: string;
+}
+
+export interface CreateTicketNotePayload {
+  body: string;
+}
+
 export interface Problem extends OperationRecord {
   owner?: string;
   linkedIncident?: string | number | null;

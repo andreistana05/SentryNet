@@ -21,7 +21,17 @@ describe("OperationsPage", () => {
   it("updates ticket status through the backend mutation seam", async () => {
     const user = userEvent.setup();
     let receivedStatus = "";
+    let receivedNoteBody = "";
     let persistedStatus = "assigned";
+    let notes = [
+      {
+        id: "NOTE-1",
+        ticketId: "TK-1",
+        body: "Field engineer dispatch approved and waiting on travel confirmation.",
+        authorName: "NOC Lead",
+        createdAt: "2026-04-08T10:05:00.000Z",
+      },
+    ];
 
     server.use(
       http.get(`${API_BASE_URL}/tickets`, () =>
@@ -50,6 +60,20 @@ describe("OperationsPage", () => {
           assignee: "Alex",
         });
       }),
+      http.get(`${API_BASE_URL}/tickets/:ticketId/notes`, () => HttpResponse.json({ data: notes })),
+      http.post(`${API_BASE_URL}/tickets/:ticketId/notes`, async ({ request, params }) => {
+        const body = (await request.json()) as { body?: string };
+        receivedNoteBody = body.body ?? "";
+        const nextNote = {
+          id: "NOTE-2",
+          ticketId: String(params.ticketId),
+          body: body.body ?? "",
+          authorName: "Operator",
+          createdAt: "2026-04-08T10:10:00.000Z",
+        };
+        notes = [...notes, nextNote];
+        return HttpResponse.json(nextNote);
+      }),
     );
 
     renderWithProviders(<OperationsPage type="tickets" />, { route: "/dashboard/tickets" });
@@ -68,6 +92,19 @@ describe("OperationsPage", () => {
 
     await waitFor(() => {
       expect(trigger).toHaveTextContent("in-progress");
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open notes for Dispatch field engineer" }));
+    await screen.findByText("Field engineer dispatch approved and waiting on travel confirmation.");
+    await user.type(screen.getByLabelText("Add Comment"), "Vendor advised a 30-minute ETA.");
+    await user.click(screen.getByRole("button", { name: "Add note" }));
+
+    await waitFor(() => {
+      expect(receivedNoteBody).toBe("Vendor advised a 30-minute ETA.");
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Vendor advised a 30-minute ETA.")).toBeInTheDocument();
     });
   });
 });

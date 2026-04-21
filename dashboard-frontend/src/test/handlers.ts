@@ -57,6 +57,18 @@ const tickets = [
   { id: "TK-1", title: "Dispatch field engineer", status: "assigned", team: "Ops", assignee: "Alex" },
 ];
 
+const ticketNotes: Record<string, Array<{ id: string; ticketId: string; body: string; authorName: string; createdAt: string }>> = {
+  "TK-1": [
+    {
+      id: "NOTE-1",
+      ticketId: "TK-1",
+      body: "Field engineer dispatch approved and waiting on travel confirmation.",
+      authorName: "NOC Lead",
+      createdAt: "2026-04-08T10:05:00.000Z",
+    },
+  ],
+};
+
 const problems = [
   { id: "PR-1", title: "Chronic WAN instability", status: "root-cause-analysis", owner: "Platform" },
 ];
@@ -84,6 +96,23 @@ export const handlers = [
 
     ticket.status = body.status;
     return HttpResponse.json(ticket);
+  }),
+  http.get(`${API_BASE_URL}/tickets/:ticketId/notes`, ({ params }) =>
+    HttpResponse.json({ data: ticketNotes[String(params.ticketId)] ?? [] }),
+  ),
+  http.post(`${API_BASE_URL}/tickets/:ticketId/notes`, async ({ params, request }) => {
+    const body = (await request.json()) as { body?: string };
+    const ticketId = String(params.ticketId);
+    const nextNote = {
+      id: `NOTE-${Date.now()}`,
+      ticketId,
+      body: body.body ?? "",
+      authorName: "Operator",
+      createdAt: new Date("2026-04-08T10:10:00.000Z").toISOString(),
+    };
+
+    ticketNotes[ticketId] = [...(ticketNotes[ticketId] ?? []), nextNote];
+    return HttpResponse.json(nextNote);
   }),
   http.get(`${API_BASE_URL}/problems`, () => HttpResponse.json({ items: problems })),
   http.get(`${API_BASE_URL}/devices/:deviceId/metrics`, () => HttpResponse.json(metrics)),

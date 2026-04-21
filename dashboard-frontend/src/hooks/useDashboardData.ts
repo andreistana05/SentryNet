@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getApiErrorMessage } from "../lib/apiError";
-import { clearStoredAuth, setStoredRole, setStoredToken, setStoredUsername } from "../lib/storage";
+import { clearStoredAuth, getStoredUsername, setStoredRole, setStoredToken, setStoredUsername } from "../lib/storage";
 import type {
   Alarm,
+  CreateTicketNotePayload,
   DashboardOverview,
   Device,
   DeviceMetricsPayload,
@@ -12,6 +13,7 @@ import type {
   Problem,
   RegisterPayload,
   Ticket,
+  TicketNote,
   TicketStatus,
 } from "../types/domain";
 import { loginUser, registerUser } from "../services/authService";
@@ -20,7 +22,9 @@ import {
   getDeviceMetrics,
   getDevices,
   getOperations,
+  getTicketNotes,
   updateTicketStatus,
+  createTicketNote,
 } from "../services/dashboardService";
 
 export function useDashboardOverview() {
@@ -99,6 +103,55 @@ export function useUpdateTicketStatusMutation() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["operations", "tickets"] });
       queryClient.invalidateQueries({ queryKey: ["overview"] });
+    },
+  });
+}
+
+export function useTicketNotes(ticketId: string | number | null | undefined) {
+  return useQuery<TicketNote[]>({
+    queryKey: ["ticket-notes", ticketId],
+    queryFn: () => getTicketNotes(ticketId as string | number),
+    enabled: Boolean(ticketId),
+    staleTime: 15_000,
+  });
+}
+
+export function useCreateTicketNoteMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ ticketId, payload }: { ticketId: string | number; payload: CreateTicketNotePayload }) =>
+      createTicketNote(ticketId, payload),
+    onMutate: async ({ ticketId, payload }) => {
+      const queryKey = ["ticket-notes", ticketId] as const;
+      await queryClient.cancelQueries({ queryKey });
+
+      const previousNotes = queryClient.getQueryData<TicketNote[]>(queryKey);
+      const optimisticNote: TicketNote = {
+        id: `temp-${Date.now()}`,
+        ticketId,
+        body: payload.body,
+        authorName: getStoredUsername(),
+        createdAt: new Date().toISOString(),
+      };
+
+      queryClient.setQueryData<TicketNote[]>(queryKey, (current) => [...(current ?? []), optimisticNote]);
+
+      return { previousNotes, queryKey };
+    },
+    onError: (_error, _variables, context) => {
+      if (context) {
+        queryClient.setQueryData(context.queryKey, context.previousNotes);
+      }
+    },
+    onSuccess: (note, variables) => {
+      queryClient.setQueryData<TicketNote[]>(["ticket-notes", variables.ticketId], (current) => {
+        const withoutOptimistic = (current ?? []).filter((entry) => !String(entry.id).startsWith("temp-"));
+        return [...withoutOptimistic, note];
+      });
+    },
+    onSettled: (_data, _error, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["ticket-notes", variables.ticketId] });
     },
   });
 }
