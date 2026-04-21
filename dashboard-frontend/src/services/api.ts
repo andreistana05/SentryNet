@@ -37,5 +37,15 @@ export async function postValidated<TResponse, TPayload>(
   return schema.parse(response.data);
 }
 
+export async function patchValidated<TResponse, TPayload>(
+  url: string,
+  payload: TPayload,
+  schema: ZodType<TResponse>,
+  config?: AxiosRequestConfig,
+): Promise<TResponse> {
+  const response = await api.patch(url, payload, config);
+  return schema.parse(response.data);
+}
+
 export { API_BASE_URL };
 export default api;

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import type { PropsWithChildren, ReactElement } from "react";
 import { MemoryRouter } from "react-router-dom";
+import { ThemeProvider } from "../theme/ThemeProvider";
 
 interface RenderWithProvidersOptions {
   route?: string;
@@ -20,7 +21,9 @@ function Providers({ children, route = "/" }: PropsWithChildren<RenderWithProvid
 
   return (
     <MemoryRouter initialEntries={[route]}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>{children}</ThemeProvider>
+      </QueryClientProvider>
     </MemoryRouter>
   );
 }

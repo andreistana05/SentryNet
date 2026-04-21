@@ -74,6 +74,17 @@ export const handlers = [
   http.get(`${API_BASE_URL}/alarms`, () => HttpResponse.json({ items: alarms })),
   http.get(`${API_BASE_URL}/incidents`, () => HttpResponse.json(incidents)),
   http.get(`${API_BASE_URL}/tickets`, () => HttpResponse.json({ data: tickets })),
+  http.patch(`${API_BASE_URL}/tickets/:ticketId/status`, async ({ params, request }) => {
+    const body = (await request.json()) as { status?: string };
+    const ticket = tickets.find((entry) => entry.id === params.ticketId);
+
+    if (!ticket || !body.status) {
+      return HttpResponse.json({ error: "Ticket not found" }, { status: 404 });
+    }
+
+    ticket.status = body.status;
+    return HttpResponse.json(ticket);
+  }),
   http.get(`${API_BASE_URL}/problems`, () => HttpResponse.json({ items: problems })),
   http.get(`${API_BASE_URL}/devices/:deviceId/metrics`, () => HttpResponse.json(metrics)),
   http.post(`${API_BASE_URL}/auth/login`, async ({ request }) => {

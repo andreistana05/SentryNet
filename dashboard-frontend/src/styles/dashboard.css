@@ -929,6 +929,97 @@
   background: rgba(103, 232, 249, 0.14);
 }
 
+.ticket-status-editor {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 172px;
+  position: relative;
+}
+
+.ticket-status-trigger {
+  width: 100%;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding-right: 0.95rem;
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+}
+
+.ticket-status-trigger:hover,
+.ticket-status-trigger:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.12);
+  outline: none;
+}
+
+.ticket-status-trigger:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.ticket-status-chevron {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-1px);
+  transition: transform 180ms ease;
+  flex: 0 0 auto;
+}
+
+.ticket-status-chevron.is-open {
+  transform: rotate(-135deg) translateY(-1px);
+}
+
+.ticket-status-menu {
+  position: fixed;
+  z-index: 120;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.4rem;
+  background: var(--dropdown-bg);
+  border: 1px solid var(--dropdown-border);
+  border-radius: 1rem;
+  box-shadow: var(--dropdown-shadow);
+  backdrop-filter: blur(18px);
+  transform-origin: bottom center;
+  max-height: 11rem;
+  overflow-y: auto;
+}
+
+.ticket-status-option {
+  width: 100%;
+  padding: 0.72rem 0.85rem;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: 0.8rem;
+  text-align: left;
+  text-transform: capitalize;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.ticket-status-option:hover,
+.ticket-status-option:focus-visible,
+.ticket-status-option.is-selected {
+  color: var(--text-primary);
+  background: var(--dropdown-option-selected);
+  outline: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 :root[data-theme="light"] .eyebrow {
   color: #0891b2;
 }
@@ -1058,6 +1149,8 @@
   border-color: rgba(139, 92, 246, 0.22);
 }
 
+.status-badge.resolved,
+.status-badge.closed,
 .status-badge.watching,
 .status-badge.p1,
 .status-badge.p2,
@@ -1113,6 +1206,8 @@
   border-color: rgba(139, 92, 246, 0.24);
 }
 
+:root[data-theme="light"] .status-badge.resolved,
+:root[data-theme="light"] .status-badge.closed,
 :root[data-theme="light"] .status-badge.watching,
 :root[data-theme="light"] .status-badge.p1,
 :root[data-theme="light"] .status-badge.p2,

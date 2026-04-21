@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getApiErrorMessage } from "../lib/apiError";
 import { clearStoredAuth, setStoredRole, setStoredToken, setStoredUsername } from "../lib/storage";
 import type {
@@ -12,6 +12,7 @@ import type {
   Problem,
   RegisterPayload,
   Ticket,
+  TicketStatus,
 } from "../types/domain";
 import { loginUser, registerUser } from "../services/authService";
 import {
@@ -19,6 +20,7 @@ import {
   getDeviceMetrics,
   getDevices,
   getOperations,
+  updateTicketStatus,
 } from "../services/dashboardService";
 
 export function useDashboardOverview() {
@@ -62,6 +64,42 @@ export function useDeviceMetrics(deviceId: string | number | null | undefined) {
     enabled: Boolean(deviceId),
     staleTime: 15_000,
     refetchInterval: 15_000,
+  });
+}
+
+export function useUpdateTicketStatusMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ ticketId, status }: { ticketId: string | number; status: TicketStatus }) =>
+      updateTicketStatus(ticketId, { status }),
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: ["operations", "tickets"] });
+
+      const previousTickets = queryClient.getQueryData<Ticket[]>(["operations", "tickets"]);
+
+      queryClient.setQueryData<Ticket[]>(["operations", "tickets"], (current) =>
+        current?.map((ticket) =>
+          String(ticket.id) === String(variables.ticketId) ? { ...ticket, status: variables.status } : ticket,
+        ),
+      );
+
+      return { previousTickets };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousTickets) {
+        queryClient.setQueryData(["operations", "tickets"], context.previousTickets);
+      }
+    },
+    onSuccess: (updatedTicket) => {
+      queryClient.setQueryData<Ticket[]>(["operations", "tickets"], (current) =>
+        current?.map((ticket) => (String(ticket.id) === String(updatedTicket.id) ? { ...ticket, ...updatedTicket } : ticket)),
+      );
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["operations", "tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["overview"] });
+    },
   });
 }
 

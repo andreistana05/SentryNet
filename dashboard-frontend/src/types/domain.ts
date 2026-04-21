@@ -59,6 +59,20 @@ export interface Ticket extends OperationRecord {
   note?: string;
 }
 
+export type TicketStatus =
+  | "assigned"
+  | "in-progress"
+  | "awaiting-vendor"
+  | "mitigating"
+  | "root-cause-analysis"
+  | "resolved"
+  | "closed"
+  | string;
+
+export interface UpdateTicketStatusPayload {
+  status: TicketStatus;
+}
+
 export interface Problem extends OperationRecord {
   owner?: string;
   linkedIncident?: string | number | null;
