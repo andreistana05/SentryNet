@@ -6,6 +6,7 @@ import platform
 import ipaddress
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from snmp_collector import collect_snmp_metrics
 
 # Configuration
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
@@ -288,8 +289,8 @@ def check_device_ports(ip: str, device_type: str, timeout: float = 0.5) -> list[
     return metrics
 
 
-def send_passive_metrics(hostname, ip, device_type, rtt_ms, packet_loss_pct=None):
-    """Push latency + packet_loss + availability + port-status metrics collected by the monitor."""
+def send_passive_metrics(hostname, ip, device_type, rtt_ms, packet_loss_pct=None, snmp_metrics=None):
+    """Push latency + packet_loss + availability + port-status + SNMP metrics to the backend."""
     headers = {"X-API-Key": API_KEY, "Content-Type": "application/json"}
     metrics = [{"type": "availability", "value": 1, "unit": "bool"}]
     if rtt_ms is not None:
@@ -297,6 +298,8 @@ def send_passive_metrics(hostname, ip, device_type, rtt_ms, packet_loss_pct=None
     if packet_loss_pct is not None:
         metrics.append({"type": "packet_loss", "value": packet_loss_pct, "unit": "%"})
     metrics.extend(check_device_ports(ip, device_type))
+    if snmp_metrics:
+        metrics.extend(snmp_metrics)
     payload = {"hostname": hostname, "ip_address": ip, "device_type": device_type, "metrics": metrics}
     try:
         requests.post(f"{BACKEND_URL}/api/v1/ingest/metrics", json=payload, headers=headers, timeout=5)
@@ -383,7 +386,8 @@ def main():
                 state["failed"] = 0
                 state["offline"] = False
                 send_heartbeat(hostname, ip, device_type)
-                send_passive_metrics(hostname, ip, device_type, rtt_ms, packet_loss_pct)
+                snmp_metrics = collect_snmp_metrics(ip)
+                send_passive_metrics(hostname, ip, device_type, rtt_ms, packet_loss_pct, snmp_metrics)
             else:
                 state["failed"] += 1
                 if state["failed"] >= OFFLINE_THRESHOLD and not state["offline"]:
