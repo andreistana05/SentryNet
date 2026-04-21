@@ -30,12 +30,17 @@ func NewPostgres(dsn string) (*gorm.DB, error) {
 
 // Migrate runs GORM auto-migration for all models.
 func Migrate(db *gorm.DB) error {
-	// Pre-migration: add alarm_number to existing rows so GORM can enforce NOT NULL.
-	// This is a no-op if the column already exists.
+	// Pre-migration: for existing databases, add alarm_number to old alarm rows
+	// before GORM enforces NOT NULL. Fresh databases do not have alarms yet, so
+	// AutoMigrate will create the table with the current model definition below.
 	if err := db.Exec(`
 		DO $$
 		BEGIN
-			IF NOT EXISTS (
+			IF EXISTS (
+				SELECT 1 FROM information_schema.tables
+				WHERE table_schema = CURRENT_SCHEMA()
+				  AND table_name   = 'alarms'
+			) AND NOT EXISTS (
 				SELECT 1 FROM information_schema.columns
 				WHERE table_schema = CURRENT_SCHEMA()
 				  AND table_name   = 'alarms'
