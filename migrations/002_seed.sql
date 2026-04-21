@@ -5,6 +5,7 @@
 -- -------------------------------------------------------------------------
 -- 1. Truncate application tables (cascade to metrics, ticket_updates)
 -- -------------------------------------------------------------------------
+TRUNCATE TABLE ticket_notes    CASCADE;
 TRUNCATE TABLE ticket_updates  CASCADE;
 TRUNCATE TABLE tickets         CASCADE;
 TRUNCATE TABLE problems        CASCADE;
@@ -238,7 +239,39 @@ INSERT INTO ticket_updates (id, ticket_id, event_type, description, timestamp) V
    NOW() - INTERVAL '20 minutes');
 
 -- -------------------------------------------------------------------------
--- 9. Problems (recurring issues elevated to root-cause analysis)
+-- 9. Ticket notes (operator comments)
+-- -------------------------------------------------------------------------
+INSERT INTO ticket_notes (id, ticket_id, body, author_name, created_at) VALUES
+  (gen_random_uuid(), '40000000-0000-0000-0000-000000000001',
+   'Checked top output — java process consuming 94% CPU. Likely runaway GC loop.',
+   'admin', NOW() - INTERVAL '12 minutes'),
+  (gen_random_uuid(), '40000000-0000-0000-0000-000000000001',
+   'Restarting the service in 5 minutes during low-traffic window.',
+   'operator', NOW() - INTERVAL '3 minutes'),
+
+  (gen_random_uuid(), '40000000-0000-0000-0000-000000000002',
+   'Heap dump taken. 4.2 GB retained by request cache — looks like a leak introduced in last deploy.',
+   'admin', NOW() - INTERVAL '8 minutes'),
+  (gen_random_uuid(), '40000000-0000-0000-0000-000000000002',
+   'Rolled back deploy v2.4.1 to v2.4.0. RAM dropped to 61%. Monitoring for 30 min before closing.',
+   'operator', NOW() - INTERVAL '2 minutes'),
+
+  (gen_random_uuid(), '40000000-0000-0000-0000-000000000003',
+   'Identified 38 GB of archived WAL files that were not purged. Cleanup script running.',
+   'admin', NOW() - INTERVAL '25 minutes'),
+  (gen_random_uuid(), '40000000-0000-0000-0000-000000000003',
+   'Storage team confirmed 200 GB SSD expansion approved. Delivery ETA: 2 days.',
+   'operator', NOW() - INTERVAL '8 minutes'),
+
+  (gen_random_uuid(), '40000000-0000-0000-0000-000000000004',
+   'Physical PSU confirmed dead. Server does not POST. Replacement unit en route.',
+   'admin', NOW() - INTERVAL '90 minutes'),
+  (gen_random_uuid(), '40000000-0000-0000-0000-000000000004',
+   'Contacted vendor for advance RMA. Ticket #VND-20240421-88 opened.',
+   'operator', NOW() - INTERVAL '15 minutes');
+
+-- -------------------------------------------------------------------------
+-- 10. Problems (recurring issues elevated to root-cause analysis)
 -- -------------------------------------------------------------------------
 INSERT INTO problems (id, problem_number, alarm_name, incident_id, hyperlink, description, status, submit_date, last_modified_date, priority, assigned_group, assigned_person, occurrence_count) VALUES
   ('50000000-0000-0000-0000-000000000001',

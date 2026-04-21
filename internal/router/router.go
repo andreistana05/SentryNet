@@ -22,7 +22,7 @@ func New(services *service.Services, cfg *config.Config) *gin.Engine {
 	// CORS — allow requests from the Dashboard (Module 3)
 	r.Use(func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-API-Key")
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
@@ -107,6 +107,9 @@ func New(services *service.Services, cfg *config.Config) *gin.Engine {
 		{
 			tickets.GET("", alarmH.ListTickets)
 			tickets.GET("/:id", alarmH.GetTicket)
+			tickets.PATCH("/:id/status", alarmH.UpdateTicketStatus)
+			tickets.GET("/:id/notes", alarmH.GetTicketNotes)
+			tickets.POST("/:id/notes", alarmH.CreateTicketNote)
 		}
 	}
 

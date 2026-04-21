@@ -73,6 +73,7 @@ func Migrate(db *gorm.DB) error {
 		&models.Problem{},
 		&models.Ticket{},
 		&models.TicketUpdate{},
+		&models.TicketNote{},
 	)
 }
 

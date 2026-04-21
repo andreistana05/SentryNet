@@ -350,3 +350,15 @@ func (r *ticketRepository) NextTicketNumber() (string, error) {
 	}
 	return fmt.Sprintf("TKT%04d", count+1), nil
 }
+
+func (r *ticketRepository) FindNotesByTicketID(ticketID uuid.UUID) ([]models.TicketNote, error) {
+	var notes []models.TicketNote
+	if err := r.db.Where("ticket_id = ?", ticketID).Order("created_at ASC").Find(&notes).Error; err != nil {
+		return nil, err
+	}
+	return notes, nil
+}
+
+func (r *ticketRepository) CreateNote(note *models.TicketNote) error {
+	return r.db.Create(note).Error
+}
