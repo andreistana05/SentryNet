@@ -137,4 +137,6 @@ type TicketRepository interface {
 	Update(ticket *models.Ticket) error
 	AddUpdate(update *models.TicketUpdate) error
 	NextTicketNumber() (string, error)
+	FindNotesByTicketID(ticketID uuid.UUID) ([]models.TicketNote, error)
+	CreateNote(note *models.TicketNote) error
 }
