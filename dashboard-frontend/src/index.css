@@ -25,6 +25,74 @@
   --radius-lg: 28px;
   --radius-md: 20px;
   --radius-sm: 14px;
+  --page-glow-left: rgba(103, 232, 249, 0.15);
+  --page-glow-right: rgba(251, 113, 133, 0.12);
+  --page-gradient-start: #081221;
+  --page-gradient-end: #050b14;
+  --sidebar-gradient-start: rgba(8, 18, 33, 0.94);
+  --sidebar-gradient-end: rgba(6, 13, 24, 0.92);
+  --metric-card-gradient-start: rgba(8, 18, 33, 0.92);
+  --metric-card-gradient-end: rgba(8, 18, 33, 0.66);
+  --logout-text: #fff7f8;
+  --mode-badge-text: #cffafe;
+  --auth-button-text: #05111e;
+  --chart-grid: rgba(148, 163, 184, 0.12);
+  --chart-tick: #9fb1c9;
+  --chart-tooltip-bg: #081221;
+  --chart-tooltip-text: #f8fbff;
+  --chart-tooltip-label: #9fb1c9;
+  --theme-toggle-bg: rgba(148, 163, 184, 0.08);
+  --theme-toggle-border: rgba(148, 163, 184, 0.14);
+  --theme-toggle-icon: #f8fbff;
+  --field-bg: rgba(148, 163, 184, 0.07);
+  --field-border: rgba(148, 163, 184, 0.14);
+  --dropdown-bg: linear-gradient(180deg, rgba(12, 23, 42, 0.98) 0%, rgba(7, 17, 31, 0.98) 100%);
+  --dropdown-border: rgba(103, 232, 249, 0.18);
+  --dropdown-shadow: 0 24px 48px rgba(2, 8, 23, 0.42);
+  --dropdown-option-hover: rgba(103, 232, 249, 0.14);
+  --dropdown-option-selected: linear-gradient(135deg, rgba(103, 232, 249, 0.2), rgba(8, 145, 178, 0.18));
+  --field-icon: rgba(248, 251, 255, 0.78);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg-base: #edf4fb;
+  --bg-elevated: rgba(255, 255, 255, 0.88);
+  --bg-panel: rgba(255, 255, 255, 0.82);
+  --bg-soft: rgba(15, 23, 42, 0.05);
+  --line-soft: rgba(71, 85, 105, 0.14);
+  --line-strong: rgba(8, 145, 178, 0.18);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --shadow-xl: 0 24px 60px rgba(15, 23, 42, 0.12);
+  --page-glow-left: rgba(8, 145, 178, 0.14);
+  --page-glow-right: rgba(251, 113, 133, 0.1);
+  --page-gradient-start: #f5fbff;
+  --page-gradient-end: #e7eef8;
+  --sidebar-gradient-start: rgba(236, 245, 252, 0.98);
+  --sidebar-gradient-end: rgba(228, 238, 248, 0.96);
+  --metric-card-gradient-start: rgba(255, 255, 255, 0.95);
+  --metric-card-gradient-end: rgba(239, 246, 255, 0.86);
+  --logout-text: #fff7f8;
+  --mode-badge-text: #0e7490;
+  --auth-button-text: #082f49;
+  --chart-grid: rgba(71, 85, 105, 0.12);
+  --chart-tick: #475569;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-text: #0f172a;
+  --chart-tooltip-label: #475569;
+  --theme-toggle-bg: rgba(14, 165, 233, 0.08);
+  --theme-toggle-border: rgba(14, 165, 233, 0.18);
+  --theme-toggle-icon: #0f172a;
+  --field-bg: rgba(255, 255, 255, 0.78);
+  --field-border: rgba(71, 85, 105, 0.16);
+  --dropdown-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 247, 252, 0.98) 100%);
+  --dropdown-border: rgba(14, 165, 233, 0.18);
+  --dropdown-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+  --dropdown-option-hover: rgba(14, 165, 233, 0.1);
+  --dropdown-option-selected: linear-gradient(135deg, rgba(14, 165, 233, 0.14), rgba(8, 145, 178, 0.1));
+  --field-icon: rgba(15, 23, 42, 0.68);
 }
 
 * {
@@ -33,15 +101,17 @@
 
 html {
   min-height: 100%;
+  overflow-x: clip;
   background:
-    radial-gradient(circle at top left, rgba(103, 232, 249, 0.15), transparent 30%),
-    radial-gradient(circle at top right, rgba(251, 113, 133, 0.12), transparent 24%),
-    linear-gradient(180deg, #081221 0%, #050b14 100%);
+    radial-gradient(circle at top left, var(--page-glow-left), transparent 30%),
+    radial-gradient(circle at top right, var(--page-glow-right), transparent 24%),
+    linear-gradient(180deg, var(--page-gradient-start) 0%, var(--page-gradient-end) 100%);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  overflow-x: clip;
   color: var(--text-primary);
   background: transparent;
 }
@@ -58,4 +128,5 @@ select {
 
 #root {
   min-height: 100vh;
+  overflow-x: clip;
 }

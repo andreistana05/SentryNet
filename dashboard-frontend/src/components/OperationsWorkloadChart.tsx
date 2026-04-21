@@ -24,12 +24,20 @@ function OperationsWorkloadChart({ data, loading }: OperationsWorkloadChartProps
         <div className="chart-canvas chart-canvas-bar">
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-              <CartesianGrid stroke="rgba(148, 163, 184, 0.12)" vertical={false} />
-              <XAxis dataKey="name" tick={{ fill: "#9fb1c9", fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#9fb1c9", fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
+              <XAxis dataKey="name" tick={{ fill: "var(--chart-tick)", fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "var(--chart-tick)", fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip
                 formatter={(value) => formatChartValue(Number(value ?? 0))}
-                contentStyle={{ background: "#081221", border: "1px solid rgba(148, 163, 184, 0.16)", borderRadius: "16px" }}
+                contentStyle={{
+                  background: "var(--chart-tooltip-bg)",
+                  border: "1px solid rgba(148, 163, 184, 0.16)",
+                  borderRadius: "16px",
+                  color: "var(--chart-tooltip-text)",
+                }}
+                itemStyle={{ color: "var(--chart-tooltip-text)" }}
+                labelStyle={{ color: "var(--chart-tooltip-label)" }}
+                cursor={{ fill: "rgba(148, 163, 184, 0.08)" }}
               />
               <Bar dataKey="value" radius={[12, 12, 4, 4]}>
                 {data.map((entry) => (

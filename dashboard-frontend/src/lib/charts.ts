@@ -43,6 +43,8 @@ export function buildOperationsWorkload(stats: DashboardStats): OperationsWorklo
   ];
 }
 
-export function formatChartValue(value: number): string {
-  return `${value} visible`;
+export function formatChartValue(value: number): [string, string] {
+  const safeValue = Number.isFinite(value) ? value : 0;
+  const suffix = safeValue === 1 ? "item" : "items";
+  return [`${safeValue} ${suffix}`, "Count"];
 }

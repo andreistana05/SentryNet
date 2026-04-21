@@ -32,7 +32,14 @@ function FleetStatusChart({ data, loading }: FleetStatusChartProps) {
                 </Pie>
                 <Tooltip
                   formatter={(value) => formatChartValue(Number(value ?? 0))}
-                  contentStyle={{ background: "#081221", border: "1px solid rgba(148, 163, 184, 0.16)", borderRadius: "16px" }}
+                  contentStyle={{
+                    background: "var(--chart-tooltip-bg)",
+                    border: "1px solid rgba(148, 163, 184, 0.16)",
+                    borderRadius: "16px",
+                    color: "var(--chart-tooltip-text)",
+                  }}
+                  itemStyle={{ color: "var(--chart-tooltip-text)" }}
+                  labelStyle={{ color: "var(--chart-tooltip-label)" }}
                 />
               </PieChart>
             </ResponsiveContainer>
