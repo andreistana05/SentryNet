@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import AppShell from "../components/AppShell";
+import CustomSelect from "../components/CustomSelect";
 import { useDashboardOverview, useDeviceMetrics, useDevices } from "../hooks/useDashboardData";
 import { buildDashboardStats } from "../lib/dashboard";
 import { buildMetricCards, getProfileKey, thresholdProfiles } from "../lib/metrics";
@@ -43,6 +44,17 @@ function MetricsPage() {
 
   const supportedProfiles = useMemo(() => {
     return Array.from(new Set(devices.map((device) => getProfileKey(device.type))));
+  }, [devices]);
+
+  const deviceOptions = useMemo(() => {
+    if (!devices.length) {
+      return [{ value: "", label: "No devices available" }];
+    }
+
+    return devices.map((device) => ({
+      value: String(device.id),
+      label: `${device.name} (${device.type || "Unknown"})`,
+    }));
   }, [devices]);
 
   return (
@@ -91,18 +103,13 @@ function MetricsPage() {
         <div className="filters-bar metrics-filters">
           <label className="filter-group">
             <span>Device</span>
-            <select
+            <CustomSelect
               value={selectedDevice?.id ?? ""}
-              onChange={(event) => setSearchParams({ device: event.target.value })}
+              options={deviceOptions}
+              onChange={(value) => setSearchParams({ device: value })}
               disabled={!devices.length}
-            >
-              {devices.length ? null : <option value="">No devices available</option>}
-              {devices.map((device) => (
-                <option key={device.id} value={device.id}>
-                  {device.name} ({device.type || "Unknown"})
-                </option>
-              ))}
-            </select>
+              ariaLabel="Select device for metrics"
+            />
           </label>
 
           <div className="metrics-context-card">

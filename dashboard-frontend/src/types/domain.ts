@@ -125,8 +125,10 @@ export interface OperationsWorkloadDatum {
 
 export interface AuthSuccess {
   token: string;
+  username?: string;
   role?: string;
   user?: {
+    username?: string;
     role?: string;
   };
 }

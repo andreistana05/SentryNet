@@ -1,5 +1,6 @@
 import { startTransition, useDeferredValue, useMemo, useState } from "react";
 import AppShell from "../components/AppShell";
+import CustomSelect from "../components/CustomSelect";
 import DeviceTable from "../components/DeviceTable";
 import FleetStatusChart from "../components/FleetStatusChart";
 import MetricCard from "../components/MetricCard";
@@ -44,6 +45,28 @@ function Dashboard() {
       left.localeCompare(right),
     );
   }, [devices]);
+
+  const statusOptions = useMemo(
+    () => [
+      { value: "all", label: "All statuses" },
+      { value: "online", label: "Online" },
+      { value: "offline", label: "Offline" },
+      { value: "unknown", label: "Unknown" },
+      { value: "warning", label: "Warning" },
+    ],
+    [],
+  );
+
+  const typeOptions = useMemo(
+    () => [
+      { value: "all", label: "All types" },
+      ...availableTypes.map((type) => ({
+        value: String(type).toLowerCase(),
+        label: String(type),
+      })),
+    ],
+    [availableTypes],
+  );
 
   const filteredDevices = useMemo(() => {
     const normalizedQuery = deferredQuery.trim().toLowerCase();
@@ -203,28 +226,22 @@ function Dashboard() {
 
           <label className="filter-group">
             <span>Status</span>
-            <select
+            <CustomSelect
               value={filters.status}
-              onChange={(event) => updateFilter("status", event.target.value)}
-            >
-              <option value="all">All statuses</option>
-              <option value="online">Online</option>
-              <option value="offline">Offline</option>
-              <option value="unknown">Unknown</option>
-              <option value="warning">Warning</option>
-            </select>
+              options={statusOptions}
+              onChange={(value) => updateFilter("status", value)}
+              ariaLabel="Filter devices by status"
+            />
           </label>
 
           <label className="filter-group">
             <span>Type</span>
-            <select value={filters.type} onChange={(event) => updateFilter("type", event.target.value)}>
-              <option value="all">All types</option>
-              {availableTypes.map((type) => (
-                <option key={type} value={String(type).toLowerCase()}>
-                  {type}
-                </option>
-              ))}
-            </select>
+            <CustomSelect
+              value={filters.type}
+              options={typeOptions}
+              onChange={(value) => updateFilter("type", value)}
+              ariaLabel="Filter devices by type"
+            />
           </label>
         </div>
       </section>

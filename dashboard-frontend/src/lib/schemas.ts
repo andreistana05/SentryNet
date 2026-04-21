@@ -76,9 +76,11 @@ export const deviceMetricsSchema = z
 
 export const authSuccessSchema = z.object({
   token: z.string(),
+  username: z.string().optional(),
   role: z.string().optional(),
   user: z
     .object({
+      username: z.string().optional(),
       role: z.string().optional(),
     })
     .optional(),

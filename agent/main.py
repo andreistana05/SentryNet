@@ -1,16 +1,23 @@
 import time
 import logging
+from datetime import datetime
 
 from collector import collect_metrics
 from device_info import get_device_info
 from sender import send_metrics, send_heartbeat
 from config import load_config
 
-
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
+    format="%(asctime)s %(levelname)s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    level=logging.WARNING,
 )
+
+
+def log(msg):
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"{ts} {msg}", flush=True)
+
 
 def main():
     config = load_config()
@@ -22,8 +29,9 @@ def main():
     heartbeat_interval = config["heartbeat_interval"]
     timeout = config["timeout"]
 
-    logging.info("Agent started")
-    logging.info(f"Device: {device_info}")
+    log("[INFO] Agent started")
+    log(f"[INFO] Backend URL: {base_url}")
+    log(f"[INFO] Device: {device_info}")
 
     last_heartbeat_time = 0
 
@@ -32,12 +40,12 @@ def main():
 
         if current_time - last_heartbeat_time >= heartbeat_interval:
             heartbeat_response = send_heartbeat(base_url, api_key, device_info, timeout)
-            logging.info(f"[HEARTBEAT] {heartbeat_response}")
+            log(f"[HEARTBEAT] {heartbeat_response}")
             last_heartbeat_time = current_time
 
         metrics = collect_metrics()
         metrics_response = send_metrics(base_url, api_key, device_info, metrics, timeout)
-        logging.info(f"[METRICS] {metrics_response}")
+        log(f"[METRICS] {metrics_response}")
 
         time.sleep(metrics_interval)
 

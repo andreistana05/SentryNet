@@ -111,6 +111,13 @@ func (s *DeviceService) Delete(id uuid.UUID) error {
 func (s *DeviceService) EnsureDevice(hostname, ip string, deviceType models.DeviceType) (*models.Device, error) {
 	device, err := s.devices.FindByIP(ip)
 	if err == nil {
+		// If the caller provides a more specific type than "server" (e.g. agent
+		// sends "workstation"), upgrade the stored type so monitor-created entries
+		// don't stay as "server" forever.
+		if deviceType != "" && deviceType != models.DeviceTypeServer && device.Type == models.DeviceTypeServer {
+			device.Type = deviceType
+			_ = s.devices.Update(device)
+		}
 		return device, nil
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
