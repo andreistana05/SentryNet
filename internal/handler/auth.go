@@ -1,3 +1,7 @@
+// Package handler contains Gin HTTP handlers for the SentryNet REST API.
+// Handlers are intentionally thin: they parse the incoming request, delegate
+// to the service layer, and write a JSON response. Business logic lives in
+// the service layer, not here.
 package handler
 
 import (
@@ -8,6 +12,7 @@ import (
 	"sentrynet/backend/internal/service"
 )
 
+// AuthHandler handles user registration and login endpoints.
 type AuthHandler struct {
 	svc *service.AuthService
 }

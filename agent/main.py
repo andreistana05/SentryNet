@@ -1,3 +1,9 @@
+"""
+SentryNet Agent – Module 1.
+
+Runs on each monitored host and periodically pushes metric snapshots and
+heartbeat signals to the SentryNet backend via the ingest API.
+"""
 import time
 import logging
 from datetime import datetime
@@ -20,6 +26,7 @@ def log(msg):
 
 
 def main():
+    """Load config, discover device identity, then loop sending metrics and heartbeats."""
     config = load_config()
     device_info = get_device_info()
 

@@ -65,6 +65,8 @@ func (r *alarmRepository) FindByNumber(number string) (*models.Alarm, error) {
 	return &alarm, nil
 }
 
+// NextAlarmNumber generates the next sequential alarm number (e.g. ALM0042).
+// It counts all existing alarms (including closed ones) to avoid reuse.
 func (r *alarmRepository) NextAlarmNumber() (string, error) {
 	var count int64
 	if err := r.db.Model(&models.Alarm{}).Count(&count).Error; err != nil {
@@ -162,6 +164,7 @@ func (r *incidentRepository) Delete(id uuid.UUID) error {
 	return r.db.Delete(&models.Incident{}, "id = ?", id).Error
 }
 
+// NextIncidentNumber generates the next sequential incident number (e.g. INC0007).
 func (r *incidentRepository) NextIncidentNumber() (string, error) {
 	var count int64
 	if err := r.db.Model(&models.Incident{}).Count(&count).Error; err != nil {
@@ -248,6 +251,7 @@ func (r *problemRepository) Delete(id uuid.UUID) error {
 	return r.db.Delete(&models.Problem{}, "id = ?", id).Error
 }
 
+// NextProblemNumber generates the next sequential problem number (e.g. PRB0003).
 func (r *problemRepository) NextProblemNumber() (string, error) {
 	var count int64
 	if err := r.db.Model(&models.Problem{}).Count(&count).Error; err != nil {
@@ -343,6 +347,7 @@ func (r *ticketRepository) AddUpdate(update *models.TicketUpdate) error {
 	return r.db.Create(update).Error
 }
 
+// NextTicketNumber generates the next sequential ticket number (e.g. TKT0015).
 func (r *ticketRepository) NextTicketNumber() (string, error) {
 	var count int64
 	if err := r.db.Model(&models.Ticket{}).Count(&count).Error; err != nil {

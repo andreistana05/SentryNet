@@ -1,3 +1,10 @@
+"""
+Metric collection for the SentryNet agent.
+
+Each collect_* function gathers one category of system data and returns either
+a scalar value or a list of metric dicts ready for the ingest payload.
+Cross-platform support covers Windows, Linux, and macOS.
+"""
 import os
 import time
 import platform
@@ -141,6 +148,12 @@ def collect_port_status():
 
 
 def collect_metrics():
+    """Collect all available system metrics and return them as a list of dicts.
+
+    Always includes cpu_usage, ram_usage, disk_usage, and uptime.
+    Temperature, latency, port_status, and network_errors are included only
+    when they are available on the current platform.
+    """
     memory = psutil.virtual_memory()
     disk = psutil.disk_usage(os.path.abspath(os.sep))
     uptime_seconds = int(time.time() - psutil.boot_time())

@@ -13,6 +13,7 @@ import (
 	"sentrynet/backend/internal/service"
 )
 
+// DeviceHandler handles CRUD operations and metric retrieval for monitored devices.
 type DeviceHandler struct {
 	devices *service.DeviceService
 	metrics *service.MetricService

@@ -1,3 +1,17 @@
+"""
+SentryNet Network Monitor – Module 4.
+
+Discovers and monitors all devices reachable on one or more configured CIDR
+ranges.  For each monitoring cycle it:
+  - Pings every device to measure RTT and packet loss.
+  - Probes well-known TCP ports per device type to detect service outages.
+  - Sends heartbeats and passive metrics to the SentryNet backend.
+  - Fires or resolves alarms via the event endpoint when a device goes offline
+    or comes back online.
+
+The device list is refreshed every DISCOVERY_INTERVAL seconds by re-scanning
+the network and merging with devices already registered in the backend.
+"""
 import time
 import socket
 import requests

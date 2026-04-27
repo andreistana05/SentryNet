@@ -14,6 +14,9 @@ import (
 	"sentrynet/backend/internal/service"
 )
 
+// AlarmHandler exposes endpoints for alarms, incidents, problems, and tickets.
+// All four entity types share this handler because they form a single escalation
+// chain: alarm → incident → problem, each owning a ticket.
 type AlarmHandler struct {
 	svc *service.AlarmService
 }

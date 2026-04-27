@@ -1,8 +1,20 @@
+"""
+HTTP sender for the SentryNet agent.
+
+Posts metric batches and heartbeats to the backend ingest API.
+Both functions retry once on transient network failures; HTTP 4xx errors
+are not retried because they indicate a client-side problem.
+"""
 import requests
 import time
 import logging
 
-def send_metrics(base_url, api_key, device_info, metrics, timeout=5): # function to send collected metrics to the backend (with retry)
+def send_metrics(base_url, api_key, device_info, metrics, timeout=5):
+    """Send a batch of collected metrics to the backend ingest endpoint.
+
+    Retries once on transient network failures. Returns True on success,
+    False after all attempts are exhausted or on a non-retryable HTTP error.
+    """
     url = f"{base_url}/metrics"
 
     headers = {
@@ -42,7 +54,11 @@ def send_metrics(base_url, api_key, device_info, metrics, timeout=5): # function
         time.sleep(2)
     return False
 
-def send_heartbeat(base_url, api_key, device_info, timeout=5): # function to send heartbeat to the backend (with retry)
+def send_heartbeat(base_url, api_key, device_info, timeout=5):
+    """Send a lightweight heartbeat to signal that this device is alive.
+
+    Retries once on transient failures. Returns True on success, False otherwise.
+    """
     url = f"{base_url}/heartbeat"
 
     headers = {

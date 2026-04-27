@@ -1,3 +1,6 @@
+// Package jwt provides JWT token generation and validation for the SentryNet API.
+// Tokens are signed with HMAC-SHA256 and embed UserID, Username, and Role so
+// the middleware can authorise requests without a database round-trip.
 package jwt
 
 import (
@@ -8,6 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// Claims are the custom payload embedded in every issued token.
 type Claims struct {
 	UserID   uuid.UUID `json:"user_id"`
 	Username string    `json:"username"`
@@ -15,6 +19,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
+// Manager signs and validates JWTs using a shared HMAC secret.
 type Manager struct {
 	secret []byte
 	expiry time.Duration
@@ -27,6 +32,7 @@ func NewManager(secret string, expiry time.Duration) *Manager {
 	}
 }
 
+// Generate creates and signs a new token for the given user identity.
 func (m *Manager) Generate(userID uuid.UUID, username, role string) (string, error) {
 	claims := Claims{
 		UserID:   userID,
@@ -42,6 +48,8 @@ func (m *Manager) Generate(userID uuid.UUID, username, role string) (string, err
 	return token.SignedString(m.secret)
 }
 
+// Validate parses and verifies the token string, returning the embedded claims.
+// Returns an error if the token is expired, malformed, or uses the wrong algorithm.
 func (m *Manager) Validate(tokenStr string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {

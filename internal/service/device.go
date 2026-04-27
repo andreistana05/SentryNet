@@ -19,6 +19,7 @@ func newDeviceService(devices repository.DeviceRepository) *DeviceService {
 	return &DeviceService{devices: devices}
 }
 
+// CreateDeviceRequest is the payload for manually registering a device via the API.
 type CreateDeviceRequest struct {
 	Name        string            `json:"name" binding:"required,max=255"`
 	Type        models.DeviceType `json:"type" binding:"required"`
@@ -28,6 +29,8 @@ type CreateDeviceRequest struct {
 	Location    string            `json:"location" binding:"max=255"`
 }
 
+// UpdateDeviceRequest carries the optional fields that can be changed on an existing device.
+// Pointer fields allow partial updates — nil means "leave unchanged".
 type UpdateDeviceRequest struct {
 	Name        *string            `json:"name" binding:"omitempty,max=255"`
 	Type        *models.DeviceType `json:"type"`

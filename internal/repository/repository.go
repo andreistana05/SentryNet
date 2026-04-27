@@ -1,3 +1,6 @@
+// Package repository defines data-access interfaces and their PostgreSQL
+// implementations. Every filter struct treats the zero value of each field as
+// "no constraint" — unset fields are omitted from the generated WHERE clause.
 package repository
 
 import (

@@ -10,6 +10,7 @@ import (
 	"sentrynet/backend/internal/service"
 )
 
+// StatusHandler serves the dashboard overview endpoint with aggregate health counts.
 type StatusHandler struct {
 	devices *service.DeviceService
 	alarms  *service.AlarmService

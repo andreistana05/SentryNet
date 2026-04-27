@@ -1,3 +1,7 @@
+// Package config loads runtime settings from environment variables.
+// All values fall back to safe defaults so the service starts without a .env
+// file in development. Production deployments must override JWTSecret and
+// IngestAPIKey at minimum.
 package config
 
 import (
@@ -8,6 +12,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Config holds all tunable runtime settings for the application.
 type Config struct {
 	Port                       string
 	DatabaseURL                string

@@ -1,3 +1,9 @@
+"""
+Configuration loader for the SentryNet agent.
+
+All settings are read from environment variables so the agent can be
+deployed via Task Scheduler or systemd without modifying source files.
+"""
 import os
 
 DEFAULT_BACKEND_URL = "http://127.0.0.1:8080"
@@ -8,6 +14,7 @@ DEFAULT_TIMEOUT = 5
 
 
 def load_config():
+    """Read agent settings from environment variables and return them as a dict."""
     backend_url = os.getenv("BACKEND_URL", DEFAULT_BACKEND_URL)
     return {
         "base_url": backend_url.rstrip("/") + "/api/v1/ingest",

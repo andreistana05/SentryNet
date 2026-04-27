@@ -19,6 +19,8 @@ func (r *metricRepository) Create(metric *models.Metric) error {
 	return r.db.Create(metric).Error
 }
 
+// CreateBatch inserts multiple metrics in a single database round-trip.
+// Returns nil immediately when the slice is empty to avoid a no-op query.
 func (r *metricRepository) CreateBatch(metrics []models.Metric) error {
 	if len(metrics) == 0 {
 		return nil

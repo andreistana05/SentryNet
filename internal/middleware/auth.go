@@ -1,3 +1,5 @@
+// Package middleware provides Gin middleware for authentication, authorisation,
+// and request logging.
 package middleware
 
 import (

@@ -7,7 +7,11 @@ import (
 	"gorm.io/gorm"
 )
 
+// DeviceType classifies an infrastructure device by its function.
 type DeviceType string
+
+// DeviceStatus reflects the last-known reachability state of a device.
+// It is set to online by heartbeats and to offline by the background stale-checker.
 type DeviceStatus string
 
 const (
@@ -24,6 +28,8 @@ const (
 	DeviceStatusUnknown DeviceStatus = "unknown"
 )
 
+// Device represents a monitored network node. IPAddress has a unique index
+// because EnsureDevice resolves devices by IP during agent and monitor ingestion.
 type Device struct {
 	ID          uuid.UUID    `gorm:"type:uuid;primaryKey" json:"id"`
 	Name        string       `gorm:"not null;size:255" json:"name"`

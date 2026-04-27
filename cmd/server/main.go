@@ -1,3 +1,7 @@
+// Package main is the SentryNet backend server entry point.
+// It initialises all dependencies (Postgres, Redis), wires up the service and
+// handler layers, launches the background alarm worker, and runs the HTTP server
+// with graceful SIGINT/SIGTERM shutdown.
 package main
 
 import (

@@ -7,6 +7,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// UserRole determines which API operations a dashboard user may perform.
+// admin can manage devices and users; operator can update alarms and tickets;
+// viewer has read-only access.
 type UserRole string
 
 const (
@@ -15,6 +18,8 @@ const (
 	RoleViewer   UserRole = "viewer"
 )
 
+// User represents a SentryNet dashboard account.
+// PasswordHash is tagged json:"-" so it is never serialised into API responses.
 type User struct {
 	ID           uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
 	Username     string    `gorm:"uniqueIndex;not null;size:100" json:"username"`

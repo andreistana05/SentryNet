@@ -19,6 +19,7 @@ func newMetricService(metrics repository.MetricRepository, alarms *AlarmService)
 }
 
 // IngestMetricItem represents a single metric in an ingest payload.
+// IngestMetricItem is a single metric entry in a batch ingest payload.
 type IngestMetricItem struct {
 	Type  models.MetricType `json:"type" binding:"required"`
 	Value float64           `json:"value"`

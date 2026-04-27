@@ -1,3 +1,7 @@
+// Package router wires together handlers, middleware, and URL paths for the
+// SentryNet API (all routes are prefixed /api/v1).
+// Ingest routes use API key auth (consumed by agents and the network monitor).
+// All dashboard and management routes require a JWT Bearer token.
 package router
 
 import (

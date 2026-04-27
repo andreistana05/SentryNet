@@ -1,3 +1,6 @@
+// Package service contains the business logic layer for SentryNet.
+// Each service wraps one or more repositories and enforces domain rules
+// (validation, state transitions, escalation chains) before touching the DB.
 package service
 
 import (

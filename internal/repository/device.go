@@ -17,6 +17,7 @@ func newDeviceRepository(db *gorm.DB) DeviceRepository {
 	return &deviceRepository{db: db}
 }
 
+// Create inserts a new device. Fails if the IP address is already registered.
 func (r *deviceRepository) Create(device *models.Device) error {
 	return r.db.Create(device).Error
 }
@@ -77,6 +78,8 @@ func (r *deviceRepository) Delete(id uuid.UUID) error {
 	return r.db.Delete(&models.Device{}, "id = ?", id).Error
 }
 
+// UpdateStatus atomically sets a device's status and last_seen timestamp.
+// Used by heartbeat processing and the offline background worker.
 func (r *deviceRepository) UpdateStatus(id uuid.UUID, status models.DeviceStatus, lastSeen time.Time) error {
 	return r.db.Model(&models.Device{}).
 		Where("id = ?", id).

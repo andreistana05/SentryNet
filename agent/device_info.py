@@ -1,10 +1,17 @@
+"""
+Device identification for the SentryNet agent.
+
+Provides hostname and outbound-IP discovery, and heuristic device-type
+detection (server vs workstation) for both Windows and Linux hosts.
+"""
 import os
 import socket
 import platform
 import subprocess
 
 
-def _run_command(command): # helper to run a command and return its output
+def _run_command(command):
+    """Run a subprocess command and return its stdout as a stripped string."""
     try:
         result = subprocess.run(
             command,
@@ -17,7 +24,13 @@ def _run_command(command): # helper to run a command and return its output
     except Exception:
         return ""
 
-def get_ip_address(): # attempts to find the real LAN IP address
+def get_ip_address():
+    """Return the machine's primary outbound LAN IP address.
+
+    Honours the AGENT_IP env-var override first (useful when a Docker bridge
+    IP would otherwise be detected instead of the real LAN address).
+    Falls back from UDP trick → gethostbyname → 127.0.0.1.
+    """
     # Allow explicit override via env var (useful when Task Scheduler
     # detects a Docker bridge IP instead of the real LAN IP)
     override = os.getenv("AGENT_IP", "").strip()
@@ -38,7 +51,12 @@ def get_ip_address(): # attempts to find the real LAN IP address
         except Exception:
             return "127.0.0.1"
 
-def detect_windows_device_type(): # heuristic to determine if a Windows machine is a server or workstation
+def detect_windows_device_type():
+    """Score-based heuristic that classifies a Windows host as 'server' or 'workstation'.
+
+    Uses ProductType (most reliable), OS caption, and GUI presence (explorer process).
+    Returns whichever category accumulates the higher score.
+    """
     score_server = 0
     score_workstation = 0
 
@@ -81,7 +99,8 @@ def detect_windows_device_type(): # heuristic to determine if a Windows machine 
 
     return "server" if score_server > score_workstation else "workstation"
 
-def _read_os_release(): # helper to read Linux OS info from standard files
+def _read_os_release():
+    """Parse /etc/os-release (or the fallback path) into a key→value dict."""
     paths = ["/etc/os-release", "/usr/lib/os-release"]
     data = {}
 
@@ -100,7 +119,12 @@ def _read_os_release(): # helper to read Linux OS info from standard files
 
     return data
 
-def detect_linux_device_type(): # heuristic to determine if a Linux machine is a server or workstation
+def detect_linux_device_type():
+    """Score-based heuristic that classifies a Linux host as 'server' or 'workstation'.
+
+    Examines os-release content, presence of a graphical session (DISPLAY/WAYLAND),
+    desktop session directories, and running processes.
+    """
     score_server = 0
     score_workstation = 0
 

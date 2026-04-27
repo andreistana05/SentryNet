@@ -1,3 +1,6 @@
+// Package models defines GORM database models and their associated constants.
+// Every model implements a BeforeCreate hook that auto-assigns a UUID primary
+// key when one has not been explicitly provided by the caller.
 package models
 
 import (
@@ -7,7 +10,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// TicketStatus tracks the lifecycle state of an alarm, incident, problem, or ticket.
+// The extended values (assigned, in-progress, awaiting-vendor, …) are used by the
+// ticket workflow; alarms and incidents only use Open / In Progress / Closed.
 type TicketStatus string
+
+// TicketPriority indicates the severity of an alert entity.
 type TicketPriority string
 
 const (

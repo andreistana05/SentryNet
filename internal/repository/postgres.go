@@ -10,6 +10,8 @@ import (
 	"sentrynet/backend/internal/models"
 )
 
+// NewPostgres opens a GORM connection to PostgreSQL using the given DSN and
+// configures the connection pool (max 25 open, 10 idle connections).
 func NewPostgres(dsn string) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
@@ -88,6 +90,7 @@ type Repositories struct {
 	Ticket   TicketRepository
 }
 
+// NewRepositories wires concrete PostgreSQL implementations for every repository interface.
 func NewRepositories(db *gorm.DB) *Repositories {
 	return &Repositories{
 		User:     newUserRepository(db),

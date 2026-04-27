@@ -12,6 +12,8 @@ import (
 	"sentrynet/backend/pkg/jwt"
 )
 
+// AuthService handles user registration and login, including password hashing
+// and JWT token issuance.
 type AuthService struct {
 	users  repository.UserRepository
 	jwtMgr *jwt.Manager
@@ -21,6 +23,8 @@ func newAuthService(users repository.UserRepository, jwtMgr *jwt.Manager) *AuthS
 	return &AuthService{users: users, jwtMgr: jwtMgr}
 }
 
+// RegisterRequest is the payload for POST /api/v1/auth/register.
+// Role defaults to "viewer" when omitted.
 type RegisterRequest struct {
 	Username string `json:"username" binding:"required,min=3,max=100"`
 	Email    string `json:"email" binding:"required,email"`
@@ -28,11 +32,13 @@ type RegisterRequest struct {
 	Role     string `json:"role"`
 }
 
+// LoginRequest is the payload for POST /api/v1/auth/login.
 type LoginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required"`
 }
 
+// AuthResponse is returned by both Register and Login on success.
 type AuthResponse struct {
 	Token string       `json:"token"`
 	User  *models.User `json:"user"`

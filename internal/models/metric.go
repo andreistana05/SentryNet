@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// MetricType identifies the kind of measurement stored in a Metric row.
 type MetricType string
 
 const (
@@ -24,6 +25,9 @@ const (
 	MetricNetworkErrors  MetricType = "network_errors"
 )
 
+// Metric stores a single time-series data point from a monitored device.
+// Unit is a free-form label (e.g. "%", "ms", "C", NIC name) that describes
+// what the value is measuring.
 type Metric struct {
 	ID        uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
 	DeviceID  uuid.UUID  `gorm:"type:uuid;not null;index" json:"device_id"`
