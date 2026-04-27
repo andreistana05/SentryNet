@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 
@@ -40,7 +41,12 @@ def save_config(settings):
 
 
 def load_config():
-    backend_url = os.getenv("BACKEND_URL", DEFAULT_BACKEND_URL)
+    file_config = _read_file_config()
+    backend_url = os.getenv(
+        "BACKEND_URL",
+        file_config.get("backend_url", DEFAULT_BACKEND_URL),
+    )
+
     return {
         "backend_url": backend_url.rstrip("/"),
         "base_url": backend_url.rstrip("/") + "/api/v1/ingest",

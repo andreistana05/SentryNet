@@ -1,0 +1,116 @@
+import os
+import asyncio
+
+SNMP_COMMUNITY = os.getenv("SNMP_COMMUNITY", "public")
+SNMP_PORT = int(os.getenv("SNMP_PORT", "161"))
+SNMP_TIMEOUT = int(os.getenv("SNMP_TIMEOUT", "2"))
+SNMP_RETRIES = int(os.getenv("SNMP_RETRIES", "1"))
+SNMP_ENABLED = os.getenv("SNMP_ENABLED", "true").lower() == "true"
+
+# Standard OIDs — MIB-II (RFC 1213) and HOST-RESOURCES-MIB
+OID_SYS_UPTIME    = "1.3.6.1.2.1.1.3.0"
+OID_CPU_LOAD      = "1.3.6.1.2.1.25.3.3.1.2"  # hrProcessorLoad table
+OID_IF_IN_OCTETS  = "1.3.6.1.2.1.2.2.1.10"    # ifInOctets table
+OID_IF_OUT_OCTETS = "1.3.6.1.2.1.2.2.1.16"    # ifOutOctets table
+
+try:
+    from pysnmp.hlapi.v3arch.asyncio import (
+        get_cmd, walk_cmd, SnmpEngine, CommunityData,
+        UdpTransportTarget, ContextData, ObjectType, ObjectIdentity,
+    )
+    _SNMP_AVAILABLE = True
+except ImportError as e:
+    _SNMP_AVAILABLE = False
+    print(f"[SNMP] pysnmp not available: {e}. Run: pip install pysnmp")
+
+
+async def _get(ip, oid):
+    """Single SNMP GET. Returns the raw value or None on any error."""
+    transport = await UdpTransportTarget.create(
+        (ip, SNMP_PORT), timeout=SNMP_TIMEOUT, retries=SNMP_RETRIES
+    )
+    err_ind, err_status, _, var_binds = await get_cmd(
+        SnmpEngine(),
+        CommunityData(SNMP_COMMUNITY, mpModel=1),  # SNMPv2c
+        transport,
+        ContextData(),
+        ObjectType(ObjectIdentity(oid)),
+    )
+    if err_ind or err_status:
+        return None
+    for vb in var_binds:
+        return vb[1]
+    return None
+
+
+async def _walk(ip, oid):
+    """SNMP WALK over a table OID. Returns list of integer values."""
+    transport = await UdpTransportTarget.create(
+        (ip, SNMP_PORT), timeout=SNMP_TIMEOUT, retries=SNMP_RETRIES
+    )
+    results = []
+    async for err_ind, err_status, _, var_binds in walk_cmd(
+        SnmpEngine(),
+        CommunityData(SNMP_COMMUNITY, mpModel=1),
+        transport,
+        ContextData(),
+        ObjectType(ObjectIdentity(oid)),
+        lexicographicMode=False,
+    ):
+        if err_ind or err_status:
+            break
+        for vb in var_binds:
+            try:
+                results.append(int(vb[1]))
+            except Exception:
+                pass
+    return results
+
+
+async def _collect_async(ip):
+    metrics = []
+
+    uptime = await _get(ip, OID_SYS_UPTIME)
+    if uptime is not None:
+        metrics.append({"type": "snmp_uptime", "value": round(int(uptime) / 100.0, 1), "unit": "s"})
+
+    cpu_values = await _walk(ip, OID_CPU_LOAD)
+    if cpu_values:
+        metrics.append({
+            "type": "snmp_cpu",
+            "value": round(sum(cpu_values) / len(cpu_values), 2),
+            "unit": "%",
+        })
+
+    in_octets = await _walk(ip, OID_IF_IN_OCTETS)
+    if in_octets:
+        metrics.append({"type": "snmp_if_in_octets", "value": sum(in_octets), "unit": "bytes"})
+
+    out_octets = await _walk(ip, OID_IF_OUT_OCTETS)
+    if out_octets:
+        metrics.append({"type": "snmp_if_out_octets", "value": sum(out_octets), "unit": "bytes"})
+
+    return metrics
+
+
+def collect_snmp_metrics(ip):
+    """
+    Query standard SNMP OIDs from a network device.
+    Returns a list of metric dicts ready for the backend ingest API.
+    Returns [] if SNMP is disabled, unavailable, or the device doesn't respond.
+    """
+    if not SNMP_ENABLED or not _SNMP_AVAILABLE:
+        return []
+
+    try:
+        metrics = asyncio.run(_collect_async(ip))
+    except Exception as e:
+        print(f"[SNMP] Error querying {ip}: {e}")
+        return []
+
+    if metrics:
+        print(f"[SNMP] {ip}: collected {len(metrics)} metric(s)")
+    else:
+        print(f"[SNMP] {ip}: no response (community='{SNMP_COMMUNITY}', port={SNMP_PORT})")
+
+    return metrics
