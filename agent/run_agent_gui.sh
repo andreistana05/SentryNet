@@ -10,4 +10,6 @@ if ! "$PYTHON" -c "import psutil, requests" >/dev/null 2>&1; then
     "$PYTHON" -m pip install -r "$SCRIPT_DIR/requirements.txt" --quiet
 fi
 
+# The GUI is just a control panel. Saving settings writes config.json, and the
+# Start Agent action inside the app launches the detached background collector.
 exec "$PYTHON" "$SCRIPT_DIR/agent_gui.py"

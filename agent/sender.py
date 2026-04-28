@@ -45,6 +45,8 @@ def send_metrics(base_url, api_key, device_info, metrics, timeout=5):
             logging.error(f"Attempt {attempt+1}: Backend unreachable")
 
         except requests.exceptions.HTTPError as e:
+            # 4xx/5xx responses made it all the way back from the backend, so
+            # retrying immediately usually does not help the agent recover.
             logging.error(f"Attempt {attempt+1}: HTTP error {response.status_code} - {response.text}")
             return False  # don't retry on bad request
 

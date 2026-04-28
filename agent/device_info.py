@@ -60,7 +60,8 @@ def detect_windows_device_type():
     score_server = 0
     score_workstation = 0
 
-    # 1 = Workstation, 2/3 = Server
+    # ProductType is the strongest signal Windows exposes:
+    # 1 = workstation, 2/3 = server.
     output = _run_command([
         "powershell",
         "-NoProfile",
@@ -165,7 +166,8 @@ def detect_linux_device_type():
     else:
         score_server += 2
 
-    # Running processes check
+    # Running processes are only a tie-breaker; many machines can have both
+    # desktop and server-ish packages installed.
     process_list = _run_command(["ps", "-e", "-o", "comm="]).lower()
 
     desktop_processes = [
@@ -185,7 +187,8 @@ def detect_linux_device_type():
     return "server" if score_server > score_workstation else "workstation"
 
 def get_device_type(config=None):
-    # Optional override
+    # Optional override is useful for edge cases like headless workstations or
+    # lightweight servers that the heuristics would misclassify.
     if config and config.get("device_type_override") in {"server", "workstation"}:
         return config["device_type_override"]
 
@@ -200,6 +203,8 @@ def get_device_type(config=None):
     return "workstation"
 
 def get_device_info():
+    # The backend keys devices primarily by hostname/IP/type, so keep this
+    # payload small and stable across metric/heartbeat submissions.
     return {
         "hostname": socket.gethostname(),
         "ip_address": get_ip_address(),

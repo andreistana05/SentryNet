@@ -70,6 +70,8 @@ def collect_latency(timeout=3):
     ]
     for host, port in candidates:
         try:
+            # A TCP connect is used instead of ICMP ping because it does not
+            # require elevated privileges and works more consistently cross-platform.
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.settimeout(timeout)
             start = time.perf_counter()
@@ -159,6 +161,8 @@ def collect_metrics():
     uptime_seconds = int(time.time() - psutil.boot_time())
 
     metrics = [
+        # cpu_percent(interval=1) blocks for a second to measure usage over a
+        # real sampling window rather than returning a meaningless instant value.
         {"type": "cpu_usage",  "value": psutil.cpu_percent(interval=1), "unit": "%"},
         {"type": "ram_usage",  "value": memory.percent,                 "unit": "%"},
         {"type": "disk_usage", "value": disk.percent,                   "unit": "%"},

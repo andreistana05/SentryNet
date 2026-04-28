@@ -26,7 +26,7 @@ def log(msg):
 
 
 def main():
-    """Load config, discover device identity, then loop sending metrics and heartbeats."""
+    """Load the effective config, discover device identity, then send data forever."""
     config = load_config()
     device_info = get_device_info()
 
@@ -45,6 +45,8 @@ def main():
     while True:
         current_time = time.time()
 
+        # Heartbeats and metrics intentionally share one loop so the agent keeps
+        # a single source of truth for timing and does not need extra threads.
         if current_time - last_heartbeat_time >= heartbeat_interval:
             heartbeat_response = send_heartbeat(base_url, api_key, device_info, timeout)
             log(f"[HEARTBEAT] {heartbeat_response}")
