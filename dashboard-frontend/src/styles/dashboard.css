@@ -1696,13 +1696,14 @@ a.metric-card:focus-visible {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1.16fr) minmax(420px, 500px);
+  grid-template-columns: minmax(0, 500px);
   grid-template-areas:
-    "topbar topbar"
-    "showcase card";
-  gap: 1rem 1.1rem;
+    "topbar"
+    "card";
+  gap: 1rem;
   align-items: stretch;
-  width: min(1320px, 100%);
+  justify-content: center;
+  width: min(560px, 100%);
 }
 
 .auth-topbar {
@@ -1788,7 +1789,6 @@ a.metric-card:focus-visible {
 
 .auth-card {
   grid-area: card;
-  align-self: center;
   max-width: 500px;
   width: 100%;
 }
