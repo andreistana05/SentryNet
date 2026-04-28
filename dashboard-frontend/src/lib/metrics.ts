@@ -1,4 +1,5 @@
-import type { Device, DeviceMetricsPayload, MetricCardViewModel, MetricDefinition } from "../types/domain";
+import { chartPalette } from "./charts";
+import type { Device, DeviceMetricsPayload, MetricCardViewModel, MetricDefinition, MetricTrendViewModel } from "../types/domain";
 import { formatMetricValue, formatTimestamp } from "./formatters";
 
 export const thresholdProfiles: Record<string, MetricDefinition[]> = {
@@ -251,6 +252,26 @@ function getMetricSources(device: Device | null, metricsPayload: DeviceMetricsPa
   ];
 }
 
+function getHistorySources(device: Device | null, metricsPayload: DeviceMetricsPayload | null): unknown[] {
+  const data = typeof metricsPayload?.data === "object" && metricsPayload?.data ? metricsPayload.data as Record<string, unknown> : null;
+  const deviceRecord = device as Record<string, unknown> | null;
+
+  return [
+    metricsPayload?.history,
+    metricsPayload?.metricHistory,
+    metricsPayload?.metricsHistory,
+    metricsPayload?.telemetryHistory,
+    data?.history,
+    data?.metricHistory,
+    data?.metricsHistory,
+    data?.telemetryHistory,
+    deviceRecord?.history,
+    deviceRecord?.metricHistory,
+    deviceRecord?.metricsHistory,
+    deviceRecord?.telemetryHistory,
+  ];
+}
+
 function resolveMetric(definition: MetricDefinition, sources: unknown[]) {
   for (const source of sources) {
     const dictionary = normalizeMetricDictionary(source);
@@ -274,6 +295,140 @@ function resolveMetric(definition: MetricDefinition, sources: unknown[]) {
   };
 }
 
+function coerceNumber(value: unknown): number | null {
+  const numeric = typeof value === "number" ? value : Number.parseFloat(String(value ?? "").replace(/,/g, ""));
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function getSeriesColor(accent: MetricDefinition["accent"]): string {
+  const colors = {
+    rose: chartPalette.rose,
+    amber: chartPalette.amber,
+    cyan: chartPalette.cyan,
+    green: chartPalette.green,
+  };
+
+  return colors[accent];
+}
+
+function readTimestamp(source: Record<string, unknown>): number | null {
+  const rawTimestamp = source.timestamp || source.updatedAt || source.createdAt || source.time || source.ts || source.date;
+  if (!rawTimestamp) return null;
+
+  const timestamp = typeof rawTimestamp === "number" ? rawTimestamp : new Date(String(rawTimestamp)).getTime();
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function getRawMetricValue(source: Record<string, unknown>, definition: MetricDefinition): unknown {
+  const nestedSources = [
+    source.metrics,
+    source.telemetry,
+    source.values,
+    source.readings,
+    source.data,
+    source,
+  ];
+
+  for (const nestedSource of nestedSources) {
+    const dictionary = normalizeMetricDictionary(nestedSource);
+
+    for (const alias of definition.aliases) {
+      const match = dictionary[slugify(alias)];
+      if (match && match.value !== undefined && match.value !== null && match.value !== "") {
+        return match.value;
+      }
+    }
+  }
+
+  return null;
+}
+
+function appendHistoryPoint(
+  pointsByTimestamp: Map<number, Record<string, string | number>>,
+  definition: MetricDefinition,
+  timestamp: number,
+  value: unknown,
+) {
+  const numeric = coerceNumber(value);
+  if (numeric === null) return;
+
+  const point = pointsByTimestamp.get(timestamp) ?? { time: "", timestamp };
+  point[definition.key] = numeric;
+  pointsByTimestamp.set(timestamp, point);
+}
+
+function addArrayHistory(
+  source: unknown[],
+  definitions: MetricDefinition[],
+  pointsByTimestamp: Map<number, Record<string, string | number>>,
+) {
+  source.forEach((entry) => {
+    if (!entry || typeof entry !== "object") return;
+
+    const record = entry as Record<string, unknown>;
+    const timestamp = readTimestamp(record);
+    if (timestamp === null) return;
+
+    const rawName = record.key || record.name || record.metric || record.type;
+    if (rawName && "value" in record) {
+      const sluggedName = slugify(rawName);
+      const definition = definitions.find((candidate) => candidate.aliases.some((alias) => slugify(alias) === sluggedName));
+      if (definition) {
+        appendHistoryPoint(pointsByTimestamp, definition, timestamp, record.value);
+      }
+      return;
+    }
+
+    definitions.forEach((definition) => {
+      appendHistoryPoint(pointsByTimestamp, definition, timestamp, getRawMetricValue(record, definition));
+    });
+  });
+}
+
+function addObjectHistory(
+  source: Record<string, unknown>,
+  definitions: MetricDefinition[],
+  pointsByTimestamp: Map<number, Record<string, string | number>>,
+) {
+  Object.entries(source).forEach(([key, value]) => {
+    const definition = definitions.find((candidate) => candidate.aliases.some((alias) => slugify(alias) === slugify(key)));
+    if (!definition || !Array.isArray(value)) return;
+
+    value.forEach((entry) => {
+      if (!entry || typeof entry !== "object") return;
+
+      const record = entry as Record<string, unknown>;
+      const timestamp = readTimestamp(record);
+      if (timestamp === null) return;
+
+      appendHistoryPoint(pointsByTimestamp, definition, timestamp, "value" in record ? record.value : record.reading);
+    });
+  });
+}
+
+function buildHistoryPoints(definitions: MetricDefinition[], sources: unknown[]): MetricTrendViewModel["points"] {
+  const pointsByTimestamp = new Map<number, Record<string, string | number>>();
+
+  sources.forEach((source) => {
+    if (Array.isArray(source)) {
+      addArrayHistory(source, definitions, pointsByTimestamp);
+      return;
+    }
+
+    if (source && typeof source === "object") {
+      addObjectHistory(source as Record<string, unknown>, definitions, pointsByTimestamp);
+    }
+  });
+
+  return Array.from(pointsByTimestamp.entries())
+    .sort(([left], [right]) => left - right)
+    .map(([timestamp, point]) => ({
+      ...point,
+      timestamp,
+      time: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(timestamp)),
+    }));
+}
+
 export function buildMetricCards(device: Device | null, metricsPayload: DeviceMetricsPayload | null): MetricCardViewModel[] {
   const activeProfile = thresholdProfiles[getProfileKey(device?.type)] || thresholdProfiles.compute;
   const sources = getMetricSources(device, metricsPayload);
@@ -286,4 +441,52 @@ export function buildMetricCards(device: Device | null, metricsPayload: DeviceMe
       lastUpdated: formatTimestamp(metric.updatedAt),
     };
   });
+}
+
+export function buildMetricTrend(device: Device | null, metricsPayload: DeviceMetricsPayload | null): MetricTrendViewModel {
+  const activeProfile = thresholdProfiles[getProfileKey(device?.type)] || thresholdProfiles.compute;
+  const sources = getMetricSources(device, metricsPayload);
+  const historyPoints = buildHistoryPoints(activeProfile, getHistorySources(device, metricsPayload));
+  const reportedKeys = new Set(historyPoints.flatMap((point) => Object.keys(point).filter((key) => key !== "time" && key !== "timestamp")));
+
+  const series = activeProfile.flatMap((definition) => {
+    const metric = resolveMetric(definition, sources);
+    const current = coerceNumber(metric.value);
+    const historyValues = historyPoints.flatMap((point) => typeof point[definition.key] === "number" ? [point[definition.key] as number] : []);
+    const latest = historyValues.at(-1) ?? current;
+
+    if (latest === null || (!reportedKeys.has(definition.key) && current === null)) return [];
+
+    return [{
+      key: definition.key,
+      label: definition.label,
+      color: getSeriesColor(definition.accent),
+      current: latest,
+      displayValue: current === null ? formatMetricValue(latest, metric.unit) : formatMetricValue(metric.value, metric.unit),
+      unit: definition.unit,
+    }];
+  });
+
+  if (historyPoints.length > 0) {
+    return {
+      points: historyPoints,
+      series,
+      hasHistory: true,
+    };
+  }
+
+  const timeLabels = ["55m", "45m", "35m", "25m", "15m", "Now"];
+  const drift = [0.78, 0.86, 0.8, 0.94, 0.89, 1];
+  const points = timeLabels.map((time, pointIndex) => {
+    const point = { time };
+
+    series.forEach((entry, seriesIndex) => {
+      const offset = (seriesIndex % 3) * 2.8;
+      point[entry.key] = Number(Math.max(0, entry.current * drift[pointIndex] + offset).toFixed(1));
+    });
+
+    return point;
+  });
+
+  return { points, series, hasHistory: false };
 }
