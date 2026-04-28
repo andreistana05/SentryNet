@@ -1,3 +1,6 @@
+// metric.go receives raw metric batches from agents, persists them, and
+// asynchronously triggers threshold evaluation in the alarm service.
+// It also provides the read side used by the dashboard's chart endpoints.
 package service
 
 import (

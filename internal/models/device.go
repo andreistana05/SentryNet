@@ -1,3 +1,6 @@
+// device.go defines the Device model and its associated DeviceType and
+// DeviceStatus enumerations. A Device represents any monitored network node
+// (server, router, switch, printer, or workstation) in the infrastructure.
 package models
 
 import (

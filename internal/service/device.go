@@ -1,3 +1,7 @@
+// device.go manages the device inventory. The most important function is
+// EnsureDevice, which lets agents and the network monitor register a device
+// automatically on first contact — no manual pre-registration required.
+// It also handles heartbeat processing that keeps device status up to date.
 package service
 
 import (

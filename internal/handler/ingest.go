@@ -1,3 +1,6 @@
+// ingest.go exposes HTTP endpoints consumed by the monitoring agents (Module 1)
+// and the network monitor (Module 4). These routes use API key authentication
+// instead of JWT and are registered under /api/v1/ingest by the router.
 package handler
 
 import (

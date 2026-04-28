@@ -1,3 +1,6 @@
+// alarm.go exposes HTTP endpoints for the four ITIL entity types (alarms,
+// incidents, problems, tickets) that form the escalation chain.
+// All routes are registered under /api/v1 by the router package.
 package handler
 
 import (

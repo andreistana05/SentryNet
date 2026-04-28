@@ -1,3 +1,7 @@
+// postgres.go sets up the GORM PostgreSQL connection, runs schema migrations,
+// and provides the Repositories container that wires every repository
+// implementation together. This is the only file that knows about the
+// underlying database driver — the rest of the app uses interfaces.
 package repository
 
 import (

@@ -1,3 +1,7 @@
+// device.go contains the PostgreSQL implementation of DeviceRepository.
+// Key operations beyond basic CRUD: FindByIP (used by EnsureDevice during
+// agent ingest), UpdateStatus (called on heartbeat and offline detection),
+// and FindStale (used by the background offline-checker worker).
 package repository
 
 import (

@@ -1,3 +1,6 @@
+// status.go exposes the GET /api/v1/status endpoint that returns an aggregate
+// health summary (device counts, open alarms, incidents, tickets, problems)
+// used by the dashboard header and overview stats panel.
 package handler
 
 import (

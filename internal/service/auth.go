@@ -1,3 +1,7 @@
+// auth.go implements user registration and login. Passwords are hashed with
+// bcrypt before storage and are never returned in API responses. On success,
+// both endpoints issue a signed JWT that the dashboard attaches to subsequent
+// requests as a Bearer token.
 package service
 
 import (

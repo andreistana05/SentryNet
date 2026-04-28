@@ -1,3 +1,5 @@
+// device.go exposes HTTP endpoints for device inventory management (CRUD)
+// and metric retrieval. Routes are registered under /api/v1/devices by the router.
 package handler
 
 import (

@@ -1,3 +1,6 @@
+// user.go contains the PostgreSQL implementation of UserRepository.
+// Only three operations are needed: Create (registration), FindByEmail
+// (login lookup), and FindByID (JWT claims resolution).
 package repository
 
 import (
