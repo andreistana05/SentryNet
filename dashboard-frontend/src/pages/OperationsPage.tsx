@@ -366,7 +366,7 @@ function OperationsPage({ type }: { type: OperationType }) {
       { key: "status", label: "Status", render: (value) => <StatusChip value={value} /> },
       { key: "assigned_group", label: "Group" },
       { key: "assigned_person", label: "Assignee" },
-      { key: "submit_date", label: "Submitted" },
+      { key: "submit_date", label: "Submitted", render: (value) => formatTimestamp(value as string) },
     ],
     incidents: [
       { key: "incident_number", label: "Incident #" },
@@ -375,7 +375,7 @@ function OperationsPage({ type }: { type: OperationType }) {
       { key: "status", label: "Status", render: (value) => <StatusChip value={value} /> },
       { key: "assigned_group", label: "Group" },
       { key: "assigned_person", label: "Assignee" },
-      { key: "submit_date", label: "Submitted" },
+      { key: "submit_date", label: "Submitted", render: (value) => formatTimestamp(value as string) },
     ],
     tickets: [
       { key: "ticket_number", label: "Ticket #" },
@@ -394,7 +394,7 @@ function OperationsPage({ type }: { type: OperationType }) {
       { key: "priority", label: "Priority", render: (value) => <StatusChip value={value} /> },
       { key: "assigned_group", label: "Team" },
       { key: "assigned_person", label: "Assignee" },
-      { key: "submit_date", label: "Submitted" },
+      { key: "submit_date", label: "Submitted", render: (value) => formatTimestamp(value as string) },
       {
         key: "notes_action",
         label: "Notes",
