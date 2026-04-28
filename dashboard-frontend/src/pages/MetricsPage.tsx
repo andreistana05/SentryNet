@@ -1,11 +1,13 @@
+import { Info } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import AppShell from "../components/AppShell";
 import CustomSelect from "../components/CustomSelect";
-import { useDashboardOverview, useDeviceMetrics, useDevices } from "../hooks/useDashboardData";
+import MetricTrendChart, { type MetricTrendRange } from "../components/MetricTrendChart";
+import { useDashboardOverview, useDeviceMetrics, useDeviceMetricsHistory, useDevices } from "../hooks/useDashboardData";
 import { buildDashboardStats } from "../lib/dashboard";
-import { buildMetricCards } from "../lib/metrics";
+import { buildMetricCards, buildMetricTrend } from "../lib/metrics";
 import type { Device, MetricCardViewModel } from "../types/domain";
 
 const EMPTY_DEVICES: Device[] = [];
@@ -76,7 +78,7 @@ function ThresholdPopover({ metric }: { metric: MetricCardViewModel }) {
         aria-expanded={isOpen}
         aria-controls={popoverId}
       >
-        i
+        <Info aria-hidden="true" size={16} strokeWidth={2.4} />
       </button>
 
       {isOpen && position
@@ -121,6 +123,7 @@ function ThresholdPopover({ metric }: { metric: MetricCardViewModel }) {
 
 function MetricsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [range, setRange] = useState<MetricTrendRange>("1h");
   const overviewQuery = useDashboardOverview();
   const devicesQuery = useDevices();
   const devices = devicesQuery.data ?? EMPTY_DEVICES;
@@ -129,7 +132,10 @@ function MetricsPage() {
     () => devices.find((device) => String(device.id) === String(selectedDeviceId)) ?? null,
     [devices, selectedDeviceId],
   );
+  // Latest-per-type: drives metric cards (always shows current values)
   const metricsQuery = useDeviceMetrics(selectedDevice?.id);
+  // Time-range history: drives the trend chart
+  const historyQuery = useDeviceMetricsHistory(selectedDevice?.id, range);
 
   useEffect(() => {
     if (!devices.length) return;
@@ -149,6 +155,10 @@ function MetricsPage() {
   const metricCards = useMemo(() => {
     return buildMetricCards(selectedDevice, metricsQuery.data ?? null);
   }, [metricsQuery.data, selectedDevice]);
+
+  const metricTrend = useMemo(() => {
+    return buildMetricTrend(selectedDevice, historyQuery.data ?? null);
+  }, [historyQuery.data, selectedDevice]);
 
   const deviceOptions = useMemo(() => {
     if (!devices.length) {
@@ -212,6 +222,8 @@ function MetricsPage() {
           </article>
         ))}
       </section>
+
+      <MetricTrendChart data={metricTrend} loading={historyQuery.isLoading} range={range} onRangeChange={setRange} />
 
       {!selectedDevice && !devicesQuery.isLoading ? (
         <div className="table-state empty-state">

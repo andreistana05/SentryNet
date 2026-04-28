@@ -126,6 +126,29 @@ export interface MetricCardViewModel extends MetricDefinition {
   lastUpdated: string;
 }
 
+export interface MetricTrendSeries {
+  key: string;
+  label: string;
+  color: string;
+  current: number;
+  displayValue: string;
+  unit: string;
+  thresholdValue: number | null;
+  thresholdLabel: string;
+}
+
+export interface MetricTrendPoint {
+  time: string;
+  timestamp?: number;
+  [key: string]: string | number;
+}
+
+export interface MetricTrendViewModel {
+  points: MetricTrendPoint[];
+  series: MetricTrendSeries[];
+  hasHistory: boolean;
+}
+
 export interface DashboardStats {
   totalDevices: number;
   onlineDevices: number;

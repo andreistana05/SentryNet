@@ -1,4 +1,4 @@
-import { buildMetricCards, getProfileKey } from "./metrics";
+import { buildMetricCards, buildMetricTrend, getProfileKey } from "./metrics";
 import type { Device, DeviceMetricsPayload } from "../types/domain";
 
 describe("metrics profiles", () => {
@@ -31,5 +31,34 @@ describe("metrics profiles", () => {
       "Packet Loss",
       "Latency",
     ]);
+  });
+
+  it("builds trend data from historical telemetry when available", () => {
+    const device: Device = {
+      id: "server-1",
+      name: "VM Host",
+      type: "Server",
+      status: "online",
+      ipAddress: "10.0.0.4",
+      lastSeen: "2026-04-14T11:00:00.000Z",
+    };
+
+    const payload: DeviceMetricsPayload = {
+      metrics: [
+        { name: "cpu_usage", value: 83, unit: "%", updatedAt: "2026-04-14T11:02:00.000Z" },
+      ],
+      history: [
+        { timestamp: "2026-04-14T10:00:00.000Z", metrics: { cpu_usage: 74, latency: 110 } },
+        { timestamp: "2026-04-14T11:00:00.000Z", metrics: { cpu_usage: 83, latency: 120 } },
+      ],
+    };
+
+    const trend = buildMetricTrend(device, payload);
+
+    expect(trend.hasHistory).toBe(true);
+    expect(trend.points).toHaveLength(2);
+    expect(trend.points[0].cpuUsage).toBe(74);
+    expect(trend.points[1].latency).toBe(120);
+    expect(trend.series.map((entry) => entry.key)).toEqual(["cpuUsage", "latency"]);
   });
 });
