@@ -43,26 +43,6 @@ function Register() {
           <ThemeToggle />
         </div>
 
-        <div className="auth-showcase">
-          <span className="eyebrow">Launch Secure Monitoring</span>
-          <h1>Bring your team into a dashboard that feels purpose-built for operations.</h1>
-          <p>
-            Create an account to start organizing your infrastructure telemetry, monitor
-            availability, and review alerts from one place.
-          </p>
-
-          <div className="auth-feature-list">
-            <div>
-              <strong>Focused operator UI</strong>
-              <span>Large visual signals, sharp contrast, and responsive panels.</span>
-            </div>
-            <div>
-              <strong>Immediate onboarding</strong>
-              <span>Register and move straight into the live dashboard experience.</span>
-            </div>
-          </div>
-        </div>
-
         <div className="auth-card">
           <div className="auth-card-header">
             <span className="eyebrow">Create Account</span>
