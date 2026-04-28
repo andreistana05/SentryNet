@@ -142,6 +142,7 @@ function MetricTrendChart({ data, loading, range, onRangeChange }: MetricTrendCh
                   name={selectedSeries.label}
                   stroke={selectedSeries.color}
                   strokeWidth={3}
+                  connectNulls
                   dot={false}
                   activeDot={{ r: 5, strokeWidth: 0 }}
                 />
