@@ -21,30 +21,18 @@ const EMPTY_DEVICES: Device[] = [];
 const pageCopy = {
   alarms: {
     eyebrow: "Alarm Queue",
-    title: "Generated alarms after threshold evaluation and deduplication.",
-    description:
-      "This view tracks newly generated alarms, correlated duplicates, and records that are still being watched before escalation.",
     summaryLabel: "Open alarms needing correlation or escalation",
   },
   incidents: {
     eyebrow: "Incident Desk",
-    title: "Incidents created from non-duplicate alarms.",
-    description:
-      "Incidents represent the operational response layer: triage, ownership, mitigation, and next actions.",
     summaryLabel: "Incidents currently under response",
   },
   tickets: {
     eyebrow: "Ticketing",
-    title: "Tickets used by teams to execute the incident response work.",
-    description:
-      "Operators assign engineers, update ticket status, add notes, and track concrete next actions until closure.",
     summaryLabel: "Tickets driving the work queue",
   },
   problems: {
     eyebrow: "Problem Management",
-    title: "Problem records raised when recurring incidents reveal deeper issues.",
-    description:
-      "Recurring incident detection promotes operational noise into root-cause analysis and longer-term corrective action.",
     summaryLabel: "Problem investigations currently open",
   },
 } as const;
@@ -436,30 +424,23 @@ function OperationsPage({ type }: { type: OperationType }) {
 
   return (
     <AppShell stats={stats}>
-      <section className="hero-panel">
-        <div className="hero-copy">
+      <section className="page-summary">
+        <div className="page-summary-copy">
           <span className="eyebrow">{config.eyebrow}</span>
-          <h2>{config.title}</h2>
-          <p>{config.description}</p>
+          <h2>{`${config.eyebrow} records`}</h2>
           {itemsQuery.isError ? (
             <div className="table-state error-state">{`We couldn't load ${type} from the backend.`}</div>
           ) : null}
         </div>
 
-        <div className="hero-stats">
-          <div className="hero-stat-card">
+        <div className="summary-metrics">
+          <div className="summary-metric">
             <span>Queue Size</span>
             <strong>{items.length}</strong>
-            <p>{config.summaryLabel}</p>
           </div>
-          <div className="hero-stat-card">
-            <span>Backend Source</span>
-            <strong>/{type}</strong>
-            <p>
-              {type === "tickets"
-                ? "Inline status changes are wired through a dedicated mutation hook and ready for a backend PATCH endpoint."
-                : "Records on this page are loaded directly from the API."}
-            </p>
+          <div className="summary-metric summary-metric-wide">
+            <span>Focus</span>
+            <strong>{config.summaryLabel}</strong>
           </div>
         </div>
       </section>

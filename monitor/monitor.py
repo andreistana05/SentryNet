@@ -1,5 +1,5 @@
 """
-SentryNet Network Monitor – Module 4.
+Network Monitor
 
 Discovers and monitors all devices reachable on one or more configured CIDR
 ranges.  For each monitoring cycle it:
@@ -22,11 +22,12 @@ import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from snmp_collector import collect_snmp_metrics
 
-# Configuration
+# ---- Configuration ----
+
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
 API_KEY = os.getenv("INGEST_API_KEY", "sk-infrapulse-7f3Kx9mQpL2wNvR8dYcT4jZbHnUeA6sW")
-INTERVAL = int(os.getenv("MONITOR_INTERVAL", "30"))
-OFFLINE_THRESHOLD = int(os.getenv("OFFLINE_THRESHOLD", "3"))
+INTERVAL = int(os.getenv("MONITOR_INTERVAL", "30"))           # seconds between polling cycles
+OFFLINE_THRESHOLD = int(os.getenv("OFFLINE_THRESHOLD", "3"))  # consecutive failures before marking offline
 PING_COUNT = int(os.getenv("PING_COUNT", "1"))
 PING_TIMEOUT = int(os.getenv("PING_TIMEOUT", "1"))
 _raw_range = os.getenv("NETWORK_RANGE", "")
@@ -46,6 +47,7 @@ for _cidr in _raw_ignore.split(","):
         except ValueError:
             pass
 
+# ---- Network utilities ----
 
 def is_ignored(ip):
     """Return True if the IP falls within any IGNORE_NETWORKS range."""
@@ -80,7 +82,7 @@ def get_default_gateway():
     return None
 
 
-# Prefer explicitly configured gateway, fall back to auto-detection
+# Prefer explicitly configured gateway, fall back to auto-detection.
 GATEWAY_IP = os.getenv("GATEWAY_IP") or get_default_gateway()
 if GATEWAY_IP:
     print(f"[INFO] Gateway IP: {GATEWAY_IP}")
@@ -93,6 +95,7 @@ def resolve_hostname(ip):
     except Exception:
         return ip
 
+# ---- Device detection ----
 
 def detect_device_type(ip):
     """Guess device type from port probing.
@@ -126,11 +129,12 @@ def detect_device_type(ip):
         return "router"
     if 3389 in open_ports:
         return "workstation"
-    # Web interface present but no Windows/printer ports → likely a router or AP
+    # Web interface present but no Windows/printer ports → likely a router or AP.
     if (80 in open_ports or 443 in open_ports) and 445 not in open_ports:
         return "router"
     return "server"
 
+# ---- Discovery ----
 
 def _ping_once(ip):
     """Ping an IP once with a 1-second timeout. Returns (ip, alive)."""
@@ -176,9 +180,14 @@ def discover_devices(network_range):
     print(f"Discovery found {len(alive)} device(s): {[d['ip_address'] for d in alive]}")
     return alive
 
+# ---- Backend communication ----
 
 def fetch_devices_from_backend():
-    """Fetch all registered devices from the backend API."""
+    """Fetch all registered devices from the backend API.
+
+    GET /api/v1/ingest/devices
+    Returns the device list so the monitor knows what to poll.
+    """
     headers = {"X-API-Key": API_KEY}
     try:
         response = requests.get(f"{BACKEND_URL}/api/v1/ingest/devices", headers=headers, timeout=10)
@@ -203,7 +212,7 @@ def fetch_devices_from_backend():
 
 
 def get_devices():
-    """Return device list.
+    """Return the active device list.
 
     If NETWORK_RANGE is set, ping-sweep + auto-detection is the source of truth.
     Devices already in the backend but outside the scanned range are merged in.
@@ -213,7 +222,7 @@ def get_devices():
         found = []
         for net_range in NETWORK_RANGES:
             found.extend(discover_devices(net_range))
-        # Deduplicate by IP in case ranges overlap
+        # Deduplicate by IP in case ranges overlap.
         seen = set()
         unique_found = []
         for d in found:
@@ -221,7 +230,7 @@ def get_devices():
                 seen.add(d["ip_address"])
                 unique_found.append(d)
         backend_devices = fetch_devices_from_backend() or []
-        # Only include backend devices outside all scanned ranges AND not ignored
+        # Include backend devices outside all scanned ranges that are not ignored.
         extra = [
             d for d in backend_devices
             if d["ip_address"] not in seen and not is_ignored(d["ip_address"])
@@ -284,10 +293,10 @@ _PORT_PROBES: dict[str, list[tuple[int, str]]] = {
 
 
 def check_device_ports(ip: str, device_type: str, timeout: float = 0.5) -> list[dict]:
-    """
-    Probe the well-known TCP ports for *device_type* and return a list of
-    port_status metrics (value=1 up, value=0 down).  The port label is stored
-    in 'unit' so the backend can build a meaningful per-port alarm name.
+    """Probe the well-known TCP ports for *device_type* and return port_status metrics.
+
+    Each entry has value=1 (up) or value=0 (down).  The port label is stored in
+    'unit' so the backend can build a meaningful per-port alarm name.
     """
     probes = _PORT_PROBES.get(device_type, [])
     metrics = []
@@ -304,7 +313,11 @@ def check_device_ports(ip: str, device_type: str, timeout: float = 0.5) -> list[
 
 
 def send_passive_metrics(hostname, ip, device_type, rtt_ms, packet_loss_pct=None, snmp_metrics=None):
-    """Push latency + packet_loss + availability + port-status + SNMP metrics to the backend."""
+    """Push latency, packet_loss, availability, port-status, and SNMP metrics to the backend.
+
+    POST /api/v1/ingest/metrics
+    Bundles all per-device measurements into a single payload per cycle.
+    """
     headers = {"X-API-Key": API_KEY, "Content-Type": "application/json"}
     metrics = [{"type": "availability", "value": 1, "unit": "bool"}]
     if rtt_ms is not None:
@@ -321,10 +334,12 @@ def send_passive_metrics(hostname, ip, device_type, rtt_ms, packet_loss_pct=None
         pass
 
 
-
-
 def send_heartbeat(hostname, ip, device_type):
-    """Send heartbeat to backend."""
+    """Signal to the backend that a device is alive.
+
+    POST /api/v1/ingest/heartbeat
+    Called on every successful ping; the backend uses this to track last-seen time.
+    """
     headers = {"X-API-Key": API_KEY, "Content-Type": "application/json"}
     data = {"hostname": hostname, "ip_address": ip, "device_type": device_type}
     try:
@@ -339,9 +354,9 @@ def send_heartbeat(hostname, ip, device_type):
 
 def send_event(hostname, ip, device_type, event_type, description,
                severity="high", group="", resolve=False):
-    """
-    Post a structured event to POST /api/v1/ingest/event.
+    """Post a structured event to fire or resolve an alarm.
 
+    POST /api/v1/ingest/event
     When resolve=False the backend creates (or escalates) an alarm immediately.
     When resolve=True the backend closes the matching alarm — call this when the
     condition clears (e.g. device comes back online after an offline event).
@@ -372,14 +387,16 @@ def send_event(hostname, ip, device_type, event_type, description,
     except Exception as e:
         print(f"HTTP error sending event for {hostname}: {e}")
 
+# ---- Monitoring loop ----
 
 def main():
     devices = get_devices()
     print(f"Network monitor started... Monitoring {len(devices)} devices.")
-    device_state = {}
+    device_state = {}      # tracks consecutive failure count and offline flag per IP
     last_discovery = time.time()
 
     while True:
+        # Refresh the device list periodically so newly added devices are picked up.
         if (time.time() - last_discovery) >= DISCOVERY_INTERVAL:
             updated = get_devices()
             if updated:
@@ -396,6 +413,7 @@ def main():
 
             if alive:
                 if state["offline"]:
+                    # Device has recovered — resolve the offline alarm.
                     print(f"Device recovered: {hostname} ({ip})")
                 state["failed"] = 0
                 state["offline"] = False
@@ -404,6 +422,7 @@ def main():
                 send_passive_metrics(hostname, ip, device_type, rtt_ms, packet_loss_pct, snmp_metrics)
             else:
                 state["failed"] += 1
+                # Fire an alarm only once per offline event (not on every failed ping).
                 if state["failed"] >= OFFLINE_THRESHOLD and not state["offline"]:
                     print(f"Device offline detected: {hostname} ({ip})")
                     state["offline"] = True
