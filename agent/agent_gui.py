@@ -7,6 +7,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox, ttk
 
+import psutil
 import requests
 
 from collector import collect_metrics
@@ -15,6 +16,8 @@ from device_info import get_device_info
 
 
 APP_DIR = Path(__file__).resolve().parent
+LOG_PATH = APP_DIR / "agent.log"
+PID_PATH = APP_DIR / "agent.pid"
 
 
 class AgentControlPanel(tk.Tk):
@@ -23,8 +26,8 @@ class AgentControlPanel(tk.Tk):
         self.title("SentryNet Agent")
         self.minsize(780, 560)
 
-        self.process = None
         self.output_queue = queue.Queue()
+        self.log_position = 0
 
         self.backend_url = tk.StringVar()
         self.api_key = tk.StringVar()
@@ -36,10 +39,16 @@ class AgentControlPanel(tk.Tk):
 
         self._load_settings()
         self._build_ui()
+        # Reloading the previous log/PID lets the GUI act as a controller for an
+        # already-running detached agent instead of owning the process lifetime.
+        self._load_existing_log()
+        self._refresh_status()
         self._poll_output()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _load_settings(self):
+        # load_config already applies env -> config.json -> defaults precedence,
+        # so the GUI always shows the effective values the agent would start with.
         config = load_config()
         self.backend_url.set(config["backend_url"])
         self.api_key.set(config["api_key"])
@@ -166,21 +175,28 @@ class AgentControlPanel(tk.Tk):
             settings = save_config(self._current_settings())
         except Exception as exc:
             messagebox.showerror("Settings", f"Could not save settings:\n{exc}")
-            return
+            return False
 
+        # Saving only updates config.json; a running agent keeps its current
+        # in-memory settings until it is restarted.
         self.backend_url.set(settings["backend_url"])
         self.status.set("Settings saved")
         self._append_log(f"Settings saved to {CONFIG_PATH}")
+        return True
 
     def reload_settings(self):
         self._load_settings()
         self.status.set("Settings reloaded")
 
     def test_backend(self):
-        self.save_settings()
+        if not self.save_settings():
+            return
+
         config = load_config()
 
         def worker():
+            # Backend reachability is checked in a thread so the Tk event loop
+            # stays responsive while the HTTP request is in flight.
             headers = {"X-API-Key": config["api_key"]}
             try:
                 response = requests.get(
@@ -201,45 +217,75 @@ class AgentControlPanel(tk.Tk):
         threading.Thread(target=worker, daemon=True).start()
 
     def start_agent(self):
-        if self.process and self.process.poll() is None:
-            self.status.set("Running")
+        pid = self._get_running_agent_pid()
+        if pid is not None:
+            self.status.set(f"Running (PID {pid})")
+            self._append_log(f"Agent already running (PID {pid})")
             return
 
-        self.save_settings()
+        if not self.save_settings():
+            return
+
         env = os.environ.copy()
+        # The GUI saves settings into config.json and then clears any matching
+        # env vars so the background agent uses the file-backed values the user
+        # just edited instead of stale shell overrides.
         for key in ("BACKEND_URL", "INGEST_API_KEY", "METRICS_INTERVAL", "HEARTBEAT_INTERVAL", "TIMEOUT"):
             env.pop(key, None)
 
-        creationflags = 0
+        popen_kwargs = {
+            "cwd": str(APP_DIR),
+            "stdin": subprocess.DEVNULL,
+            "env": env,
+        }
+
         if os.name == "nt":
+            # These flags make the child independent from the console/window
+            # that launched the GUI.
             creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            creationflags |= getattr(subprocess, "DETACHED_PROCESS", 0)
+            creationflags |= getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+            popen_kwargs["creationflags"] = creationflags
+        else:
+            # start_new_session detaches the agent from the GUI's session on
+            # Unix-like systems so closing the window does not kill the agent.
+            popen_kwargs["start_new_session"] = True
 
-        self.process = subprocess.Popen(
-            [sys.executable, "-u", str(APP_DIR / "main.py")],
-            cwd=str(APP_DIR),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-            env=env,
-            creationflags=creationflags,
-        )
+        with LOG_PATH.open("a", encoding="utf-8") as log_file:
+            process = subprocess.Popen(
+                [sys.executable, "-u", str(APP_DIR / "main.py")],
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                **popen_kwargs,
+            )
 
-        threading.Thread(target=self._read_process_output, daemon=True).start()
-        self.status.set("Running")
-        self._append_log("Agent process started")
+        PID_PATH.write_text(f"{process.pid}\n", encoding="utf-8")
+        # The PID file is the hand-off point between GUI sessions; a reopened
+        # control panel can stop or rediscover the detached agent later.
+        self._refresh_status()
+        self._append_log(f"Agent process started in background (PID {process.pid})")
 
     def stop_agent(self):
-        if not self.process or self.process.poll() is not None:
+        pid = self._get_running_agent_pid()
+        if pid is None:
             self.status.set("Stopped")
+            self._clear_pid_file()
             return
 
-        self.process.terminate()
         try:
-            self.process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            self.process.kill()
-            self.process.wait(timeout=5)
+            process = psutil.Process(pid)
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except psutil.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
+        except psutil.NoSuchProcess:
+            pass
+
+        self._clear_pid_file()
         self.status.set("Stopped")
         self._append_log("Agent process stopped")
 
@@ -256,17 +302,11 @@ class AgentControlPanel(tk.Tk):
         threading.Thread(target=worker, daemon=True).start()
 
     def clear_log(self):
+        LOG_PATH.write_text("", encoding="utf-8")
+        self.log_position = 0
         self.log.configure(state="normal")
         self.log.delete("1.0", "end")
         self.log.configure(state="disabled")
-
-    def _read_process_output(self):
-        if not self.process or not self.process.stdout:
-            return
-        for line in self.process.stdout:
-            self.output_queue.put(("log", line.rstrip()))
-        code = self.process.poll()
-        self.output_queue.put(("status", f"Stopped ({code})" if code else "Stopped"))
 
     def _poll_output(self):
         try:
@@ -281,6 +321,10 @@ class AgentControlPanel(tk.Tk):
         except queue.Empty:
             pass
 
+        # The UI no longer reads live stdout from a child process, so it tails
+        # the shared log file and re-checks the PID file on every poll cycle.
+        self._poll_log_file()
+        self._refresh_status()
         self.after(200, self._poll_output)
 
     def _append_log(self, message):
@@ -298,11 +342,89 @@ class AgentControlPanel(tk.Tk):
                 values=(metric.get("type", ""), metric.get("value", ""), metric.get("unit", "")),
             )
 
+    def _load_existing_log(self):
+        if not LOG_PATH.exists():
+            return
+
+        try:
+            content = LOG_PATH.read_text(encoding="utf-8")
+        except OSError:
+            return
+
+        if content:
+            self.log.configure(state="normal")
+            self.log.insert("end", content)
+            self.log.see("end")
+            self.log.configure(state="disabled")
+
+        self.log_position = len(content)
+
+    def _poll_log_file(self):
+        if not LOG_PATH.exists():
+            return
+
+        try:
+            size = LOG_PATH.stat().st_size
+            # If the log was truncated (for example via Clear Log), start tailing
+            # again from the beginning instead of seeking past EOF.
+            if size < self.log_position:
+                self.log_position = 0
+
+            with LOG_PATH.open("r", encoding="utf-8") as log_file:
+                log_file.seek(self.log_position)
+                content = log_file.read()
+                self.log_position = log_file.tell()
+        except OSError:
+            return
+
+        if content:
+            self.log.configure(state="normal")
+            self.log.insert("end", content)
+            self.log.see("end")
+            self.log.configure(state="disabled")
+
+    def _get_running_agent_pid(self):
+        try:
+            pid = int(PID_PATH.read_text(encoding="utf-8").strip())
+        except (OSError, ValueError):
+            return None
+
+        try:
+            process = psutil.Process(pid)
+            cmdline = process.cmdline()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            self._clear_pid_file()
+            return None
+
+        # Match the command line as well as the PID so a recycled PID does not
+        # accidentally point the GUI at an unrelated process.
+        if any(str(APP_DIR / "main.py") == part for part in cmdline):
+            return pid
+
+        self._clear_pid_file()
+        return None
+
+    def _clear_pid_file(self):
+        try:
+            PID_PATH.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError:
+            pass
+
+    def _refresh_status(self):
+        pid = self._get_running_agent_pid()
+        self.status.set(f"Running (PID {pid})" if pid is not None else "Stopped")
+
     def _on_close(self):
-        if self.process and self.process.poll() is None:
-            if not messagebox.askyesno("SentryNet Agent", "Stop the running agent and close?"):
-                return
-            self.stop_agent()
+        pid = self._get_running_agent_pid()
+        if pid is not None:
+            keep_running = messagebox.askyesno(
+                "SentryNet Agent",
+                "Keep the agent running in the background after closing this window?",
+            )
+            if not keep_running:
+                self.stop_agent()
         self.destroy()
 
 

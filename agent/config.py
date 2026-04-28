@@ -1,3 +1,12 @@
+"""Configuration loading and persistence for the SentryNet agent.
+
+config.py stores the built-in defaults and the logic for reading overrides.
+config.json stores the user- or GUI-saved settings for a specific machine.
+Effective precedence is:
+1. environment variables
+2. config.json
+3. defaults in this file
+"""
 import json
 import os
 from pathlib import Path
@@ -12,6 +21,7 @@ CONFIG_PATH = Path(__file__).with_name("config.json")
 
 
 def _read_file_config():
+    """Read config.json if it exists, otherwise return an empty config."""
     if not CONFIG_PATH.exists():
         return {}
 
@@ -25,6 +35,7 @@ def _read_file_config():
 
 
 def save_config(settings):
+    """Persist the editable runtime settings to config.json."""
     file_settings = {
         "backend_url": settings["backend_url"].strip().rstrip("/"),
         "api_key": settings["api_key"].strip(),
@@ -41,8 +52,14 @@ def save_config(settings):
 
 
 def load_config():
+    """Return the effective runtime config after applying precedence rules."""
     file_config = _read_file_config()
-    backend_url = os.getenv("BACKEND_URL", file_config.get("backend_url", DEFAULT_BACKEND_URL))
+    # Precedence is env var -> config.json -> hard-coded default so packaged
+    # installs can be centrally overridden without editing files on disk.
+    backend_url = os.getenv(
+        "BACKEND_URL",
+        file_config.get("backend_url", DEFAULT_BACKEND_URL),
+    )
     return {
         "backend_url": backend_url.rstrip("/"),
         "base_url": backend_url.rstrip("/") + "/api/v1/ingest",

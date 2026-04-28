@@ -1,7 +1,10 @@
 @echo off
 REM ── SentryNet Agent ─────────────────────────────────────────────────────────
-REM  Edit config.py to set the backend URL, ingest API key, and intervals.
-REM  Set up this file in Windows Task Scheduler to run at system startup.
+REM  Edit config.json or use the GUI to set the backend URL, ingest API key,
+REM  and intervals for this machine. config.py only contains the built-in
+REM  defaults and the logic that loads config.json/environment overrides.
+REM  This launcher runs the headless agent in the current session. Use Windows
+REM  Task Scheduler or another service wrapper if you want it to start automatically.
 REM ───────────────────────────────────────────────────────────────────────────
 
 cd /d "%~dp0"
