@@ -39,17 +39,43 @@ func (h *StatusHandler) Overview(c *gin.Context) {
 		counts[d.Status]++
 	}
 
-	openAlarms, _ := h.alarms.List(repository.AlarmFilter{Status: models.StatusOpen, Limit: 1000})
+	// Alarms and incidents are "active" when Open or In Progress.
+	activeAlarms, _ := h.alarms.List(repository.AlarmFilter{Limit: 1000})
+	activeAlarmCount := 0
 	highPriorityCount := 0
-	for _, a := range openAlarms {
-		if a.Priority == models.PriorityHigh {
-			highPriorityCount++
+	for _, a := range activeAlarms {
+		if a.Status != models.StatusClosed {
+			activeAlarmCount++
+			if a.Priority == models.PriorityHigh {
+				highPriorityCount++
+			}
 		}
 	}
 
-	openIncidents, _ := h.alarms.ListIncidents(repository.IncidentFilter{Status: models.StatusOpen, Limit: 1000})
-	openTickets, _ := h.alarms.ListTickets(repository.TicketFilter{Status: models.StatusOpen, Limit: 1000})
-	openProblems, _ := h.alarms.ListProblems(repository.ProblemFilter{Status: models.StatusOpen, Limit: 1000})
+	allIncidents, _ := h.alarms.ListIncidents(repository.IncidentFilter{Limit: 1000})
+	activeIncidentCount := 0
+	for _, i := range allIncidents {
+		if i.Status != models.StatusClosed {
+			activeIncidentCount++
+		}
+	}
+
+	// Tickets use different terminal statuses: "resolved" and "closed".
+	allTickets, _ := h.alarms.ListTickets(repository.TicketFilter{Limit: 1000})
+	activeTicketCount := 0
+	for _, t := range allTickets {
+		if t.Status != models.StatusResolved && t.Status != models.StatusClosedTicket {
+			activeTicketCount++
+		}
+	}
+
+	allProblems, _ := h.alarms.ListProblems(repository.ProblemFilter{Limit: 1000})
+	activeProblemCount := 0
+	for _, p := range allProblems {
+		if p.Status != models.StatusClosed && p.Status != models.StatusClosedTicket {
+			activeProblemCount++
+		}
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"devices": gin.H{
@@ -59,17 +85,17 @@ func (h *StatusHandler) Overview(c *gin.Context) {
 			"unknown": counts[models.DeviceStatusUnknown],
 		},
 		"alarms": gin.H{
-			"open":          len(openAlarms),
+			"open":          activeAlarmCount,
 			"high_priority": highPriorityCount,
 		},
 		"incidents": gin.H{
-			"open": len(openIncidents),
+			"open": activeIncidentCount,
 		},
 		"tickets": gin.H{
-			"open": len(openTickets),
+			"open": activeTicketCount,
 		},
 		"problems": gin.H{
-			"open": len(openProblems),
+			"open": activeProblemCount,
 		},
 	})
 }
