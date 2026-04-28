@@ -7,9 +7,9 @@ import type { MetricTrendViewModel } from "../types/domain";
 export type MetricTrendRange = "7d" | "1d" | "1h";
 
 const rangeOptions: Array<{ key: MetricTrendRange; label: string; ms: number }> = [
-  { key: "7d", label: "7Days", ms: 7 * 24 * 60 * 60 * 1000 },
-  { key: "1d", label: "1Day", ms: 24 * 60 * 60 * 1000 },
-  { key: "1h", label: "1Hour", ms: 60 * 60 * 1000 },
+  { key: "7d", label: "7 Day", ms: 7 * 24 * 60 * 60 * 1000 },
+  { key: "1d", label: "1 Day", ms: 24 * 60 * 60 * 1000 },
+  { key: "1h", label: "1 Hour", ms: 60 * 60 * 1000 },
 ];
 
 const fallbackRangeLabels: Record<MetricTrendRange, string[]> = {
@@ -30,6 +30,19 @@ function formatRangeTime(timestamp: number | undefined, range: MetricTrendRange,
 
   if (range === "7d") {
     return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(timestamp));
+  }
+
+  return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(timestamp));
+}
+
+function formatTooltipTime(label: string | number, range: MetricTrendRange, hasHistory: boolean): string {
+  if (!hasHistory) return String(label);
+
+  const timestamp = Number(label);
+  if (!Number.isFinite(timestamp)) return String(label);
+
+  if (range === "7d") {
+    return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric" }).format(new Date(timestamp));
   }
 
   return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(timestamp));
@@ -115,7 +128,15 @@ function MetricTrendChart({ data, loading, range, onRangeChange }: MetricTrendCh
             <ResponsiveContainer width="100%" height={340}>
               <LineChart data={visiblePoints} margin={{ top: 12, right: 16, left: -18, bottom: 0 }}>
                 <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
-                <XAxis dataKey="time" tick={{ fill: "var(--chart-tick)", fontSize: 12 }} axisLine={false} tickLine={false} />
+                <XAxis
+                  dataKey={data.hasHistory ? "timestamp" : "time"}
+                  type={data.hasHistory ? "number" : "category"}
+                  domain={data.hasHistory ? ["dataMin", "dataMax"] : undefined}
+                  tick={{ fill: "var(--chart-tick)", fontSize: 12 }}
+                  tickFormatter={(value) => data.hasHistory ? formatRangeTime(Number(value), range, String(value)) : String(value)}
+                  axisLine={false}
+                  tickLine={false}
+                />
                 <YAxis
                   domain={["auto", "auto"]}
                   tick={{ fill: "var(--chart-tick)", fontSize: 12 }}
@@ -126,6 +147,7 @@ function MetricTrendChart({ data, loading, range, onRangeChange }: MetricTrendCh
                 />
                 <Tooltip
                   formatter={(value) => [formatMetricValue(Number(value ?? 0), selectedSeries.unit), selectedSeries.label]}
+                  labelFormatter={(label) => formatTooltipTime(label, range, data.hasHistory)}
                   contentStyle={{
                     background: "var(--chart-tooltip-bg)",
                     border: "1px solid rgba(148, 163, 184, 0.16)",
