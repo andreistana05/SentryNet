@@ -11,6 +11,7 @@ import (
 	"sentrynet/backend/internal/repository"
 )
 
+// DeviceService manages the device inventory and handles heartbeat processing.
 type DeviceService struct {
 	devices repository.DeviceRepository
 }

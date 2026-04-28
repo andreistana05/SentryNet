@@ -9,6 +9,8 @@ import (
 	"sentrynet/backend/internal/repository"
 )
 
+// MetricService ingests raw metric data from agents and monitors,
+// stores it in the database, and triggers threshold evaluation asynchronously.
 type MetricService struct {
 	metrics repository.MetricRepository
 	alarms  *AlarmService
@@ -18,7 +20,6 @@ func newMetricService(metrics repository.MetricRepository, alarms *AlarmService)
 	return &MetricService{metrics: metrics, alarms: alarms}
 }
 
-// IngestMetricItem represents a single metric in an ingest payload.
 // IngestMetricItem is a single metric entry in a batch ingest payload.
 type IngestMetricItem struct {
 	Type  models.MetricType `json:"type" binding:"required"`
