@@ -4,7 +4,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { formatMetricValue } from "../lib/formatters";
 import type { MetricTrendViewModel } from "../types/domain";
 
-type MetricTrendRange = "7d" | "1d" | "1h";
+export type MetricTrendRange = "7d" | "1d" | "1h";
 
 const rangeOptions: Array<{ key: MetricTrendRange; label: string; ms: number }> = [
   { key: "7d", label: "7Days", ms: 7 * 24 * 60 * 60 * 1000 },
@@ -21,6 +21,8 @@ const fallbackRangeLabels: Record<MetricTrendRange, string[]> = {
 interface MetricTrendChartProps {
   data: MetricTrendViewModel;
   loading: boolean;
+  range: MetricTrendRange;
+  onRangeChange: (range: MetricTrendRange) => void;
 }
 
 function formatRangeTime(timestamp: number | undefined, range: MetricTrendRange, fallback: string): string {
@@ -33,8 +35,7 @@ function formatRangeTime(timestamp: number | undefined, range: MetricTrendRange,
   return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(timestamp));
 }
 
-function MetricTrendChart({ data, loading }: MetricTrendChartProps) {
-  const [range, setRange] = useState<MetricTrendRange>("1h");
+function MetricTrendChart({ data, loading, range, onRangeChange }: MetricTrendChartProps) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -89,7 +90,7 @@ function MetricTrendChart({ data, loading }: MetricTrendChartProps) {
                 key={entry.key}
                 type="button"
                 className={range === entry.key ? "is-active" : ""}
-                onClick={() => setRange(entry.key)}
+                onClick={() => onRangeChange(entry.key)}
                 aria-pressed={range === entry.key}
               >
                 {entry.label}

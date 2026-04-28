@@ -33,7 +33,7 @@ func (r *metricRepository) FindByDevice(deviceID uuid.UUID, filter MetricFilter)
 	q := r.db.Where("device_id = ?", deviceID)
 	q = applyMetricFilter(q, filter)
 
-	if err := q.Order("timestamp DESC").Find(&metrics).Error; err != nil {
+	if err := q.Order("timestamp ASC").Find(&metrics).Error; err != nil {
 		return nil, err
 	}
 	return metrics, nil

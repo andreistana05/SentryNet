@@ -253,10 +253,14 @@ function getMetricSources(device: Device | null, metricsPayload: DeviceMetricsPa
 }
 
 function getHistorySources(device: Device | null, metricsPayload: DeviceMetricsPayload | null): unknown[] {
-  const data = typeof metricsPayload?.data === "object" && metricsPayload?.data ? metricsPayload.data as Record<string, unknown> : null;
+  const data = typeof metricsPayload?.data === "object" && metricsPayload?.data && !Array.isArray(metricsPayload.data)
+    ? metricsPayload.data as Record<string, unknown>
+    : null;
   const deviceRecord = device as Record<string, unknown> | null;
 
   return [
+    // When the backend returns time-series history, it comes back as { data: [...] }
+    Array.isArray(metricsPayload?.data) ? metricsPayload.data : undefined,
     metricsPayload?.history,
     metricsPayload?.metricHistory,
     metricsPayload?.metricsHistory,

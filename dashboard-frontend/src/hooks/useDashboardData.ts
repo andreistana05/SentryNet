@@ -71,6 +71,25 @@ export function useDeviceMetrics(deviceId: string | number | null | undefined) {
   });
 }
 
+const RANGE_MS: Record<string, number> = {
+  "7d": 7 * 24 * 60 * 60 * 1000,
+  "1d": 24 * 60 * 60 * 1000,
+  "1h": 60 * 60 * 1000,
+};
+
+export function useDeviceMetricsHistory(deviceId: string | number | null | undefined, range: string) {
+  return useQuery<DeviceMetricsPayload>({
+    queryKey: ["device-metrics-history", deviceId, range],
+    queryFn: () => {
+      const from = new Date(Date.now() - (RANGE_MS[range] ?? RANGE_MS["1h"])).toISOString();
+      return getDeviceMetrics(deviceId as string | number, from);
+    },
+    enabled: Boolean(deviceId),
+    staleTime: 15_000,
+    refetchInterval: 15_000,
+  });
+}
+
 export function useUpdateTicketStatusMutation() {
   const queryClient = useQueryClient();
 
