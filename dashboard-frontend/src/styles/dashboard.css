@@ -636,10 +636,25 @@
   min-height: 180px;
   overflow: hidden;
   padding: 1.3rem;
+  color: inherit;
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-md);
   background: linear-gradient(180deg, var(--metric-card-gradient-start), var(--metric-card-gradient-end));
   animation: card-rise 500ms ease both;
+  text-decoration: none;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+a.metric-card {
+  cursor: pointer;
+}
+
+a.metric-card:hover,
+a.metric-card:focus-visible {
+  border-color: rgba(103, 232, 249, 0.26);
+  box-shadow: 0 16px 34px rgba(2, 8, 23, 0.24), 0 0 0 3px rgba(103, 232, 249, 0.1);
+  outline: none;
+  transform: translateY(-2px);
 }
 
 .metric-card.is-loading strong {
