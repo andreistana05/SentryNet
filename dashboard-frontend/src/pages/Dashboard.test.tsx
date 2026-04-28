@@ -42,4 +42,33 @@ describe("Dashboard", () => {
       expect(screen.queryByText("Edge Router 1")).not.toBeInTheDocument();
     });
   });
+
+  it("collapses and expands the live overview panels", async () => {
+    renderWithProviders(<Dashboard />, { route: "/dashboard" });
+
+    await screen.findByText("Edge Router 1");
+    expect(screen.getByText("CPU threshold exceeded")).toBeInTheDocument();
+
+    const inventoryToggle = screen.getByRole("button", { name: /collapse live inventory/i });
+    fireEvent.click(inventoryToggle);
+
+    expect(inventoryToggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("Edge Router 1")).not.toBeVisible();
+
+    fireEvent.click(inventoryToggle);
+
+    expect(inventoryToggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("Edge Router 1")).toBeInTheDocument();
+
+    const workQueuesToggle = screen.getByRole("button", { name: /collapse live work queues/i });
+    fireEvent.click(workQueuesToggle);
+
+    expect(workQueuesToggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("CPU threshold exceeded")).not.toBeVisible();
+
+    fireEvent.click(workQueuesToggle);
+
+    expect(workQueuesToggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("CPU threshold exceeded")).toBeInTheDocument();
+  });
 });
