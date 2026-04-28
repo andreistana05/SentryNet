@@ -1,4 +1,5 @@
 import { startTransition, useDeferredValue, useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import AppShell from "../components/AppShell";
 import CustomSelect from "../components/CustomSelect";
 import DeviceTable from "../components/DeviceTable";
@@ -23,6 +24,7 @@ function Dashboard() {
     type: "all",
     query: "",
   });
+  const [isWorkQueuesExpanded, setIsWorkQueuesExpanded] = useState(true);
   const [timeNow] = useState(() => Date.now());
 
   const overviewQuery = useDashboardOverview();
@@ -153,6 +155,7 @@ function Dashboard() {
 
   const statusChartData = useMemo(() => buildStatusBreakdown(devices, stats), [devices, stats]);
   const workloadChartData = useMemo(() => buildOperationsWorkload(stats), [stats]);
+  const workQueuesPanelId = "live-work-queues-panel";
 
   function updateFilter(key: "status" | "type" | "query", value: string) {
     startTransition(() => {
@@ -259,9 +262,21 @@ function Dashboard() {
             <span className="eyebrow">Live Work Queues</span>
             <h3>Cross-links between alarms, incidents, tickets, and problems</h3>
           </div>
+
+          <button
+            className="panel-toggle"
+            type="button"
+            aria-controls={workQueuesPanelId}
+            aria-expanded={isWorkQueuesExpanded}
+            aria-label={isWorkQueuesExpanded ? "Collapse Live Work Queues" : "Expand Live Work Queues"}
+            title={isWorkQueuesExpanded ? "Collapse Live Work Queues" : "Expand Live Work Queues"}
+            onClick={() => setIsWorkQueuesExpanded((current) => !current)}
+          >
+            <ChevronDown aria-hidden="true" className="panel-toggle-icon" size={18} />
+          </button>
         </div>
 
-        <div className="queue-grid">
+        <div id={workQueuesPanelId} className="queue-grid collapsible-panel-body" hidden={!isWorkQueuesExpanded}>
           {(
             [
               { key: "alarms", items: alarms },
