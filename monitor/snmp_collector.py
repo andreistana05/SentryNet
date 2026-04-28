@@ -1,11 +1,29 @@
+"""
+SentryNet SNMP Collector – Module 4 (sub-component).
+
+Polls standard SNMP OIDs from network devices and returns metric dicts
+that the monitor can forward directly to the SentryNet backend ingest API.
+
+Collected metrics per device:
+  - System uptime     (MIB-II sysUpTime)
+  - CPU load average  (HOST-RESOURCES-MIB hrProcessorLoad)
+  - Interface traffic (MIB-II ifInOctets / ifOutOctets)
+
+If SNMP is disabled or pysnmp is not installed, collect_snmp_metrics()
+returns an empty list so the rest of the monitor continues unaffected.
+"""
 import os
 import asyncio
 
+# ---- Configuration ----
+
 SNMP_COMMUNITY = os.getenv("SNMP_COMMUNITY", "public")
-SNMP_PORT = int(os.getenv("SNMP_PORT", "161"))
-SNMP_TIMEOUT = int(os.getenv("SNMP_TIMEOUT", "2"))
-SNMP_RETRIES = int(os.getenv("SNMP_RETRIES", "1"))
-SNMP_ENABLED = os.getenv("SNMP_ENABLED", "true").lower() == "true"
+SNMP_PORT      = int(os.getenv("SNMP_PORT", "161"))
+SNMP_TIMEOUT   = int(os.getenv("SNMP_TIMEOUT", "2"))    # seconds per request
+SNMP_RETRIES   = int(os.getenv("SNMP_RETRIES", "1"))    # retries before giving up
+SNMP_ENABLED   = os.getenv("SNMP_ENABLED", "true").lower() == "true"
+
+# ---- OID definitions ----
 
 # Standard OIDs — MIB-II (RFC 1213) and HOST-RESOURCES-MIB
 OID_SYS_UPTIME    = "1.3.6.1.2.1.1.3.0"
@@ -13,6 +31,10 @@ OID_CPU_LOAD      = "1.3.6.1.2.1.25.3.3.1.2"  # hrProcessorLoad table
 OID_IF_IN_OCTETS  = "1.3.6.1.2.1.2.2.1.10"    # ifInOctets table
 OID_IF_OUT_OCTETS = "1.3.6.1.2.1.2.2.1.16"    # ifOutOctets table
 
+# ---- Library import (optional dependency) ----
+
+# pysnmp is an optional dependency — the monitor runs without it.
+# Install with: pip install pysnmp
 try:
     from pysnmp.hlapi.v3arch.asyncio import (
         get_cmd, walk_cmd, SnmpEngine, CommunityData,
@@ -23,6 +45,7 @@ except ImportError as e:
     _SNMP_AVAILABLE = False
     print(f"[SNMP] pysnmp not available: {e}. Run: pip install pysnmp")
 
+# ---- SNMP primitives ----
 
 async def _get(ip, oid):
     """Single SNMP GET. Returns the raw value or None on any error."""
@@ -44,7 +67,7 @@ async def _get(ip, oid):
 
 
 async def _walk(ip, oid):
-    """SNMP WALK over a table OID. Returns list of integer values."""
+    """SNMP WALK over a table OID. Returns a list of integer values."""
     transport = await UdpTransportTarget.create(
         (ip, SNMP_PORT), timeout=SNMP_TIMEOUT, retries=SNMP_RETRIES
     )
@@ -66,14 +89,18 @@ async def _walk(ip, oid):
                 pass
     return results
 
+# ---- Metric collection ----
 
 async def _collect_async(ip):
+    """Gather all SNMP metrics for a single device asynchronously."""
     metrics = []
 
+    # Uptime is reported in hundredths of a second by MIB-II — convert to seconds.
     uptime = await _get(ip, OID_SYS_UPTIME)
     if uptime is not None:
         metrics.append({"type": "snmp_uptime", "value": round(int(uptime) / 100.0, 1), "unit": "s"})
 
+    # CPU load: average across all processor entries in the hrProcessorLoad table.
     cpu_values = await _walk(ip, OID_CPU_LOAD)
     if cpu_values:
         metrics.append({
@@ -82,6 +109,7 @@ async def _collect_async(ip):
             "unit": "%",
         })
 
+    # Interface traffic: sum octets across all interfaces for a device-wide total.
     in_octets = await _walk(ip, OID_IF_IN_OCTETS)
     if in_octets:
         metrics.append({"type": "snmp_if_in_octets", "value": sum(in_octets), "unit": "bytes"})
@@ -94,8 +122,8 @@ async def _collect_async(ip):
 
 
 def collect_snmp_metrics(ip):
-    """
-    Query standard SNMP OIDs from a network device.
+    """Query standard SNMP OIDs from a network device.
+
     Returns a list of metric dicts ready for the backend ingest API.
     Returns [] if SNMP is disabled, unavailable, or the device doesn't respond.
     """
