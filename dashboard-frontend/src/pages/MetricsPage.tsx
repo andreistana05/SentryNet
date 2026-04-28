@@ -1,3 +1,4 @@
+import { Info } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
@@ -76,7 +77,7 @@ function ThresholdPopover({ metric }: { metric: MetricCardViewModel }) {
         aria-expanded={isOpen}
         aria-controls={popoverId}
       >
-        i
+        <Info aria-hidden="true" size={16} strokeWidth={2.4} />
       </button>
 
       {isOpen && position
