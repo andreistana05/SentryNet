@@ -636,10 +636,25 @@
   min-height: 180px;
   overflow: hidden;
   padding: 1.3rem;
+  color: inherit;
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-md);
   background: linear-gradient(180deg, var(--metric-card-gradient-start), var(--metric-card-gradient-end));
   animation: card-rise 500ms ease both;
+  text-decoration: none;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+a.metric-card {
+  cursor: pointer;
+}
+
+a.metric-card:hover,
+a.metric-card:focus-visible {
+  border-color: rgba(103, 232, 249, 0.26);
+  box-shadow: 0 16px 34px rgba(2, 8, 23, 0.24), 0 0 0 3px rgba(103, 232, 249, 0.1);
+  outline: none;
+  transform: translateY(-2px);
 }
 
 .metric-card.is-loading strong {
@@ -650,6 +665,16 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.8rem;
+}
+
+.metric-card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
 }
 
 .metric-orb {
@@ -658,6 +683,86 @@
   border-radius: 999px;
   background: currentColor;
   box-shadow: 0 0 22px currentColor;
+}
+
+.metric-threshold-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  color: var(--text-primary);
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 999px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.metric-threshold-trigger:hover,
+.metric-threshold-trigger:focus-visible,
+.metric-threshold-trigger[aria-expanded="true"] {
+  background: rgba(103, 232, 249, 0.14);
+  border-color: rgba(103, 232, 249, 0.34);
+  box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.12);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.metric-threshold-popover {
+  position: fixed;
+  z-index: 140;
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.95rem;
+  color: var(--text-primary);
+  background: var(--dropdown-bg);
+  border: 1px solid var(--dropdown-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--dropdown-shadow);
+  backdrop-filter: blur(18px);
+}
+
+.metric-threshold-popover-header {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.metric-threshold-popover-header span,
+.metric-threshold-levels span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.metric-threshold-popover-header strong {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.05rem;
+}
+
+.metric-threshold-levels {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.metric-threshold-levels div {
+  display: grid;
+  grid-template-columns: 5.2rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.68rem 0.75rem;
+  background: rgba(148, 163, 184, 0.06);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 0.8rem;
+}
+
+.metric-threshold-levels strong {
+  min-width: 0;
+  font-size: 0.95rem;
+  text-align: right;
 }
 
 .metric-card strong {

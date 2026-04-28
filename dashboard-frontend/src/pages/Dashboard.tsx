@@ -112,24 +112,28 @@ function Dashboard() {
       value: stats.activeAlerts,
       label: "Threshold breaches or correlated signals awaiting operational handling",
       accent: "rose" as const,
+      to: "/dashboard/alarms",
     },
     {
       title: "Open Incidents",
       value: stats.openIncidents,
       label: "Non-duplicate alarms promoted into incident response",
       accent: "amber" as const,
+      to: "/dashboard/incidents",
     },
     {
       title: "Active Tickets",
       value: stats.openTickets,
       label: "Engineer-owned work items moving incidents toward closure",
       accent: "cyan" as const,
+      to: "/dashboard/tickets",
     },
     {
       title: "Problem Records",
       value: stats.openProblems,
       label: "Recurring patterns escalated into root-cause investigation",
       accent: "green" as const,
+      to: "/dashboard/problems",
     },
   ];
 
@@ -168,6 +172,7 @@ function Dashboard() {
             accent={metric.accent}
             delay={index}
             loading={isLoading}
+            to={metric.to}
           />
         ))}
       </section>

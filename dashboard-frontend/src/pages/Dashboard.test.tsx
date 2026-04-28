@@ -23,6 +23,16 @@ describe("Dashboard", () => {
     expect(screen.getByText("Current workflow volume")).toBeInTheDocument();
     expect(screen.getAllByText("Online").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Alarms").length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: /view open alarms/i })).toHaveAttribute("href", "/dashboard/alarms");
+    expect(screen.getByRole("link", { name: /view open incidents/i })).toHaveAttribute(
+      "href",
+      "/dashboard/incidents",
+    );
+    expect(screen.getByRole("link", { name: /view active tickets/i })).toHaveAttribute("href", "/dashboard/tickets");
+    expect(screen.getByRole("link", { name: /view problem records/i })).toHaveAttribute(
+      "href",
+      "/dashboard/problems",
+    );
 
     const search = screen.getByPlaceholderText(/search device/i);
     fireEvent.change(search, { target: { value: "Print Hub" } });
