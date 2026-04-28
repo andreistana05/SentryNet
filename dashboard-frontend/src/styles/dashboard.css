@@ -1254,7 +1254,7 @@
 }
 
 .metrics-summary-metrics {
-  grid-template-columns: minmax(260px, 1.5fr) repeat(2, minmax(150px, 0.75fr));
+  grid-template-columns: minmax(360px, 1fr) minmax(180px, 270px);
 }
 
 .metrics-asset-selector {
@@ -1863,6 +1863,10 @@
   }
 
   .summary-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .metrics-summary-metrics {
     grid-template-columns: 1fr;
   }
 

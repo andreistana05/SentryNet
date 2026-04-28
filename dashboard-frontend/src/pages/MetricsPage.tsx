@@ -42,10 +42,6 @@ function MetricsPage() {
 
   const activeProfile = thresholdProfiles[getProfileKey(selectedDevice?.type)] || thresholdProfiles.compute;
 
-  const supportedProfiles = useMemo(() => {
-    return Array.from(new Set(devices.map((device) => getProfileKey(device.type))));
-  }, [devices]);
-
   const deviceOptions = useMemo(() => {
     if (!devices.length) {
       return [{ value: "", label: "No devices available" }];
@@ -83,11 +79,6 @@ function MetricsPage() {
             <span>Device Status</span>
             <strong>{selectedDevice?.status ?? "Unknown"}</strong>
             <small>{selectedDevice?.ipAddress ?? "IP unavailable"}</small>
-          </div>
-          <div className="summary-metric">
-            <span>Telemetry Source</span>
-            <strong>{metricsQuery.isLoading ? "Loading" : metricsQuery.data ? "Live API" : "Profile only"}</strong>
-            <small>{supportedProfiles.length} profiles in fleet</small>
           </div>
         </div>
       </section>
