@@ -1,13 +1,123 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import AppShell from "../components/AppShell";
 import CustomSelect from "../components/CustomSelect";
 import { useDashboardOverview, useDeviceMetrics, useDevices } from "../hooks/useDashboardData";
 import { buildDashboardStats } from "../lib/dashboard";
-import { buildMetricCards, getProfileKey, thresholdProfiles } from "../lib/metrics";
-import type { Device } from "../types/domain";
+import { buildMetricCards } from "../lib/metrics";
+import type { Device, MetricCardViewModel } from "../types/domain";
 
 const EMPTY_DEVICES: Device[] = [];
+
+function ThresholdPopover({ metric }: { metric: MetricCardViewModel }) {
+  const popoverId = useId();
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState<{ left: number; top: number; width: number } | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function updatePosition() {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
+
+      const triggerRect = trigger.getBoundingClientRect();
+      const popoverHeight = popoverRef.current?.offsetHeight ?? 190;
+      const width = Math.min(300, window.innerWidth - 32);
+      const left = Math.min(Math.max(16, triggerRect.right - width), window.innerWidth - width - 16);
+      const belowTop = triggerRect.bottom + 10;
+      const top = belowTop + popoverHeight > window.innerHeight - 16
+        ? Math.max(16, triggerRect.top - popoverHeight - 10)
+        : belowTop;
+
+      setPosition({ left, top, width });
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (!triggerRef.current?.contains(target) && !popoverRef.current?.contains(target)) {
+        setIsOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    updatePosition();
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [isOpen]);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="metric-threshold-trigger"
+        onClick={() => setIsOpen((current) => !current)}
+        aria-label={`Show thresholds for ${metric.label}`}
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
+        aria-controls={popoverId}
+      >
+        i
+      </button>
+
+      {isOpen && position
+        ? createPortal(
+            <div
+              ref={popoverRef}
+              className="metric-threshold-popover"
+              id={popoverId}
+              role="dialog"
+              aria-label={`${metric.label} thresholds`}
+              style={{
+                left: `${position.left}px`,
+                top: `${position.top}px`,
+                width: `${position.width}px`,
+              }}
+            >
+              <div className="metric-threshold-popover-header">
+                <span>Thresholds</span>
+                <strong>{metric.label}</strong>
+              </div>
+              <div className="metric-threshold-levels">
+                <div>
+                  <span>Low</span>
+                  <strong>{metric.thresholds.low}</strong>
+                </div>
+                <div>
+                  <span>Medium</span>
+                  <strong>{metric.thresholds.medium}</strong>
+                </div>
+                <div>
+                  <span>High</span>
+                  <strong>{metric.thresholds.high}</strong>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}
 
 function MetricsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -39,8 +149,6 @@ function MetricsPage() {
   const metricCards = useMemo(() => {
     return buildMetricCards(selectedDevice, metricsQuery.data ?? null);
   }, [metricsQuery.data, selectedDevice]);
-
-  const activeProfile = thresholdProfiles[getProfileKey(selectedDevice?.type)] || thresholdProfiles.compute;
 
   const deviceOptions = useMemo(() => {
     if (!devices.length) {
@@ -92,7 +200,10 @@ function MetricsPage() {
           >
             <div className="metric-card-top">
               <span>{metric.label}</span>
-              <div className="metric-orb" />
+              <div className="metric-card-actions">
+                <ThresholdPopover metric={metric} />
+                <div className="metric-orb" />
+              </div>
             </div>
 
             <strong>{devicesQuery.isLoading ? "--" : metric.displayValue}</strong>
@@ -102,51 +213,12 @@ function MetricsPage() {
         ))}
       </section>
 
-      <section className="table-container">
-        <div className="table-header">
-          <div>
-            <span className="eyebrow">Threshold Matrix</span>
-            <h3>Alert levels for {selectedDevice?.type ?? "the selected profile"}</h3>
-          </div>
+      {!selectedDevice && !devicesQuery.isLoading ? (
+        <div className="table-state empty-state">
+          No device is available yet. Once inventory loads, this page will attach the correct
+          metric profile automatically.
         </div>
-
-        {!selectedDevice && !devicesQuery.isLoading ? (
-          <div className="table-state empty-state">
-            No device is available yet. Once inventory loads, this page will attach the correct
-            metric profile automatically.
-          </div>
-        ) : null}
-
-        {selectedDevice ? (
-          <div className="table-scroll">
-            <table className="devices-table metrics-threshold-table">
-              <thead>
-                <tr>
-                  <th>Metric</th>
-                  <th>Low</th>
-                  <th>Medium</th>
-                  <th>High</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activeProfile.map((metric) => (
-                  <tr key={metric.key}>
-                    <td>
-                      <div className="device-name-cell">
-                        <strong>{metric.label}</strong>
-                        <span>{metric.unit === "C" ? "Unit: deg C" : `Unit: ${metric.unit}`}</span>
-                      </div>
-                    </td>
-                    <td>{metric.thresholds.low}</td>
-                    <td>{metric.thresholds.medium}</td>
-                    <td>{metric.thresholds.high}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-      </section>
+      ) : null}
     </AppShell>
   );
 }
