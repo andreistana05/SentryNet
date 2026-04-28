@@ -599,6 +599,8 @@
 }
 
 .metric-trend-panel {
+  --chart-threshold: rgba(251, 113, 133, 0.72);
+  --chart-threshold-text: var(--rose);
   min-height: 430px;
 }
 

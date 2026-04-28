@@ -133,6 +133,8 @@ export interface MetricTrendSeries {
   current: number;
   displayValue: string;
   unit: string;
+  thresholdValue: number | null;
+  thresholdLabel: string;
 }
 
 export interface MetricTrendPoint {

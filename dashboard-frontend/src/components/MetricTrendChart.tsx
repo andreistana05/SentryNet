@@ -1,6 +1,6 @@
 import { Activity } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatMetricValue } from "../lib/formatters";
 import type { MetricTrendViewModel } from "../types/domain";
 
@@ -135,6 +135,21 @@ function MetricTrendChart({ data, loading, range, onRangeChange }: MetricTrendCh
                   itemStyle={{ color: "var(--chart-tooltip-text)" }}
                   labelStyle={{ color: "var(--chart-tooltip-label)" }}
                 />
+                {selectedSeries.thresholdValue !== null ? (
+                  <ReferenceLine
+                    y={selectedSeries.thresholdValue}
+                    stroke="var(--chart-threshold)"
+                    strokeDasharray="6 6"
+                    strokeWidth={2}
+                    label={{
+                      value: `High ${formatMetricValue(selectedSeries.thresholdValue, selectedSeries.unit)}`,
+                      position: "insideTopRight",
+                      fill: "var(--chart-threshold-text)",
+                      fontSize: 12,
+                      fontWeight: 800,
+                    }}
+                  />
+                ) : null}
                 <Line
                   key={selectedSeries.key}
                   type="monotone"

@@ -304,6 +304,11 @@ function coerceNumber(value: unknown): number | null {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+function getThresholdValue(definition: MetricDefinition): number | null {
+  const highMatch = definition.thresholds.high.match(/-?\d+(\.\d+)?/);
+  return highMatch ? coerceNumber(highMatch[0]) : null;
+}
+
 function getSeriesColor(accent: MetricDefinition["accent"]): string {
   const colors = {
     rose: chartPalette.rose,
@@ -468,6 +473,8 @@ export function buildMetricTrend(device: Device | null, metricsPayload: DeviceMe
       current: latest,
       displayValue: current === null ? formatMetricValue(latest, metric.unit) : formatMetricValue(metric.value, metric.unit),
       unit: definition.unit,
+      thresholdValue: getThresholdValue(definition),
+      thresholdLabel: definition.thresholds.high,
     }];
   });
 
