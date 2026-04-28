@@ -158,32 +158,6 @@ function Dashboard() {
 
   return (
     <AppShell stats={stats}>
-      <section className="hero-panel">
-        <div className="hero-copy">
-          <span className="eyebrow">Realtime Operations</span>
-          <h2>Infrastructure visibility with a cleaner, more confident command center.</h2>
-          <p>
-            Track device health, review fleet activity, and spot issues faster with a
-            dashboard designed to feel live and operational.
-          </p>
-        </div>
-
-        <div className="hero-stats">
-          <div className="hero-stat-card">
-            <span>Service Health</span>
-            <strong>{stats.healthyRatio}%</strong>
-            <p>Healthy footprint based on currently online devices.</p>
-          </div>
-          <div className="hero-stat-card">
-            <span>Workflow Objects</span>
-            <strong>
-              {stats.activeAlerts + stats.openIncidents + stats.openTickets + stats.openProblems}
-            </strong>
-            <p>Total alarms, incidents, tickets, and problems currently visible.</p>
-          </div>
-        </div>
-      </section>
-
       <section className="metrics-grid">
         {metricCards.map((metric, index) => (
           <MetricCard
@@ -198,19 +172,34 @@ function Dashboard() {
         ))}
       </section>
 
-      <section className="chart-grid">
-        <FleetStatusChart data={statusChartData} loading={isLoading} />
-        <OperationsWorkloadChart data={workloadChartData} loading={isLoading} />
+      <section className="page-summary">
+        <div className="page-summary-copy">
+          <span className="eyebrow">Realtime Operations</span>
+          <h2>Infrastructure overview</h2>
+        </div>
+
+        <div className="summary-metrics">
+          <div className="summary-metric">
+            <span>Service Health</span>
+            <strong>{stats.healthyRatio}%</strong>
+          </div>
+          <div className="summary-metric">
+            <span>Workflow Objects</span>
+            <strong>
+              {stats.activeAlerts + stats.openIncidents + stats.openTickets + stats.openProblems}
+            </strong>
+          </div>
+          <div className="summary-metric">
+            <span>Devices Visible</span>
+            <strong>{stats.filtered}</strong>
+          </div>
+        </div>
       </section>
 
       <section className="control-surface">
         <div className="control-copy">
           <span className="eyebrow">Fleet Explorer</span>
-          <h3>Filter devices while keeping the operational workflow in view.</h3>
-          <p>
-            Deferred search keeps interactions responsive while React updates the list in
-            the background.
-          </p>
+          <h3>Filter devices</h3>
         </div>
 
         <div className="filters-bar">
@@ -253,6 +242,11 @@ function Dashboard() {
         totalDevices={stats.totalDevices}
         filteredCount={stats.filtered}
       />
+
+      <section className="chart-grid">
+        <FleetStatusChart data={statusChartData} loading={isLoading} />
+        <OperationsWorkloadChart data={workloadChartData} loading={isLoading} />
+      </section>
 
       <section className="table-container">
         <div className="table-header">

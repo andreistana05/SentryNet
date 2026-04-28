@@ -1,4 +1,4 @@
-import { useTheme } from "../theme/ThemeProvider";
+import { useTheme } from "../theme/useTheme";
 
 function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();

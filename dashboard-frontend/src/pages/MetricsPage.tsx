@@ -59,50 +59,18 @@ function MetricsPage() {
 
   return (
     <AppShell stats={stats}>
-      <section className="hero-panel">
-        <div className="hero-copy">
+      <section className="page-summary metrics-page-summary">
+        <div className="page-summary-copy">
           <span className="eyebrow">Device Metrics</span>
-          <h2>Thresholds and live telemetry tailored to the device you are inspecting.</h2>
-          <p>
-            Servers and workstations keep compute-focused signals, network gear shifts toward
-            transport health, and printers expose consumables instead of irrelevant system metrics.
-          </p>
+          <h2>Telemetry profile</h2>
           {devicesQuery.isError ? (
             <div className="table-state error-state">We couldn't load devices for the metrics view.</div>
           ) : null}
         </div>
 
-        <div className="hero-stats">
-          <div className="hero-stat-card">
+        <div className="summary-metrics metrics-summary-metrics">
+          <div className="summary-metric metrics-asset-selector">
             <span>Selected Asset</span>
-            <strong>{selectedDevice?.name ?? (devicesQuery.isLoading ? "--" : "No device")}</strong>
-            <p>
-              {selectedDevice
-                ? `${selectedDevice.type || "Unknown"} telemetry profile`
-                : "Pick a device to inspect its available metrics."}
-            </p>
-          </div>
-          <div className="hero-stat-card">
-            <span>Profiles In Fleet</span>
-            <strong>{supportedProfiles.length}</strong>
-            <p>Telemetry templates currently represented by your monitored inventory.</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="control-surface metrics-control-surface">
-        <div className="control-copy">
-          <span className="eyebrow">Telemetry Scope</span>
-          <h3>Choose a device and review only the metrics that make sense for its role.</h3>
-          <p>
-            If the backend provides live readings, they appear here. Otherwise the page still
-            shows the expected thresholds for that device class.
-          </p>
-        </div>
-
-        <div className="filters-bar metrics-filters">
-          <label className="filter-group">
-            <span>Device</span>
             <CustomSelect
               value={selectedDevice?.id ?? ""}
               options={deviceOptions}
@@ -110,22 +78,16 @@ function MetricsPage() {
               disabled={!devices.length}
               ariaLabel="Select device for metrics"
             />
-          </label>
-
-          <div className="metrics-context-card">
-            <span className="metrics-context-label">Device Status</span>
-            <strong>{selectedDevice?.status ?? "Unknown"}</strong>
-            <p>{selectedDevice?.ipAddress ?? "IP address unavailable"}</p>
           </div>
-
-          <div className="metrics-context-card">
-            <span className="metrics-context-label">Telemetry Source</span>
+          <div className="summary-metric">
+            <span>Device Status</span>
+            <strong>{selectedDevice?.status ?? "Unknown"}</strong>
+            <small>{selectedDevice?.ipAddress ?? "IP unavailable"}</small>
+          </div>
+          <div className="summary-metric">
+            <span>Telemetry Source</span>
             <strong>{metricsQuery.isLoading ? "Loading" : metricsQuery.data ? "Live API" : "Profile only"}</strong>
-            <p>
-              {metricsQuery.isLoading
-                ? "Fetching latest device metrics."
-                : "Thresholds remain visible even when the device is not reporting."}
-            </p>
+            <small>{supportedProfiles.length} profiles in fleet</small>
           </div>
         </div>
       </section>
