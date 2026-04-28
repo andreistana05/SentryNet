@@ -4,9 +4,10 @@ import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import AppShell from "../components/AppShell";
 import CustomSelect from "../components/CustomSelect";
+import MetricTrendChart from "../components/MetricTrendChart";
 import { useDashboardOverview, useDeviceMetrics, useDevices } from "../hooks/useDashboardData";
 import { buildDashboardStats } from "../lib/dashboard";
-import { buildMetricCards } from "../lib/metrics";
+import { buildMetricCards, buildMetricTrend } from "../lib/metrics";
 import type { Device, MetricCardViewModel } from "../types/domain";
 
 const EMPTY_DEVICES: Device[] = [];
@@ -151,6 +152,10 @@ function MetricsPage() {
     return buildMetricCards(selectedDevice, metricsQuery.data ?? null);
   }, [metricsQuery.data, selectedDevice]);
 
+  const metricTrend = useMemo(() => {
+    return buildMetricTrend(selectedDevice, metricsQuery.data ?? null);
+  }, [metricsQuery.data, selectedDevice]);
+
   const deviceOptions = useMemo(() => {
     if (!devices.length) {
       return [{ value: "", label: "No devices available" }];
@@ -213,6 +218,8 @@ function MetricsPage() {
           </article>
         ))}
       </section>
+
+      <MetricTrendChart data={metricTrend} loading={metricsQuery.isLoading} />
 
       {!selectedDevice && !devicesQuery.isLoading ? (
         <div className="table-state empty-state">

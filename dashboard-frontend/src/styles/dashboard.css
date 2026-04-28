@@ -598,6 +598,99 @@
   min-height: 320px;
 }
 
+.metric-trend-panel {
+  min-height: 430px;
+}
+
+.metric-trend-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.metric-trend-canvas {
+  min-height: 340px;
+}
+
+.metric-trend-actions {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.metric-range-control {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem;
+  background: rgba(148, 163, 184, 0.06);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 999px;
+}
+
+.metric-range-control button {
+  min-width: 4.25rem;
+  padding: 0.5rem 0.7rem;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.metric-range-control button:hover,
+.metric-range-control button:focus-visible,
+.metric-range-control button.is-active {
+  color: var(--text-primary);
+  background: rgba(103, 232, 249, 0.12);
+  outline: none;
+}
+
+.metric-range-control button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.12);
+}
+
+.metric-trend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.68rem 0.85rem;
+  color: var(--cyan);
+  background: rgba(103, 232, 249, 0.08);
+  border: 1px solid rgba(103, 232, 249, 0.18);
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.metric-trend-legend {
+  align-content: start;
+}
+
+.metric-trend-option {
+  width: 100%;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease, opacity 180ms ease, transform 180ms ease;
+}
+
+.metric-trend-option:hover,
+.metric-trend-option:focus-visible,
+.metric-trend-option.is-active {
+  border-color: rgba(103, 232, 249, 0.26);
+  background: rgba(148, 163, 184, 0.08);
+  outline: none;
+}
+
+.metric-trend-option:not(.is-active) {
+  opacity: 0.48;
+}
+
 .chart-legend {
   display: grid;
   gap: 0.8rem;
@@ -1895,7 +1988,8 @@ a.metric-card:focus-visible {
   .control-surface,
   .workflow-grid,
   .chart-grid,
-  .chart-shell {
+  .chart-shell,
+  .metric-trend-layout {
     grid-template-columns: 1fr;
   }
 
