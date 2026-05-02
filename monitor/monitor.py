@@ -418,7 +418,7 @@ def main():
                 state["failed"] = 0
                 state["offline"] = False
                 send_heartbeat(hostname, ip, device_type)
-                snmp_metrics = collect_snmp_metrics(ip)
+                snmp_metrics = collect_snmp_metrics(ip, device_type)
                 send_passive_metrics(hostname, ip, device_type, rtt_ms, packet_loss_pct, snmp_metrics)
             else:
                 state["failed"] += 1
