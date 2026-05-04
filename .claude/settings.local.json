@@ -27,11 +27,8 @@
       "Bash(docker inspect:*)",
       "Bash(find \"F:/facultate/SentryNet/SentryNet app\" -type f -name \"*.go\" | xargs grep -l \"ticket\" -i)",
       "Bash(docker ps:*)",
-      "Bash(netstat -ano)",
-      "PowerShell(netsh interface ipv4 show excludedportrange protocol=tcp)",
-      "PowerShell(net stop winnat)",
-      "PowerShell(net start winnat)",
-      "PowerShell(netsh interface ipv4 show dynamicport tcp)"
+      "Bash(python -c \"import pysnmp; print\\('pysnmp OK'\\)\")",
+      "Bash(python snmp_test.py)"
     ]
   }
 }
