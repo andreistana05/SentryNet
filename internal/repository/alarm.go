@@ -1,3 +1,7 @@
+// alarm.go contains the PostgreSQL implementations for the four repositories
+// that cover the ITIL escalation chain: AlarmRepository, IncidentRepository,
+// ProblemRepository, and TicketRepository. Each section is labelled with a
+// comment banner for easy navigation.
 package repository
 
 import (

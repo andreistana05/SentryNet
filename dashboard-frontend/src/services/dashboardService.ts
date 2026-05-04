@@ -71,8 +71,12 @@ export async function getOperations<T extends OperationType>(type: T): Promise<O
   return extractCollection(payload) as OperationsMap[T];
 }
 
-export async function getDeviceMetrics(deviceId: string | number): Promise<DeviceMetricsPayload> {
-  return getValidated(`/devices/${deviceId}/metrics`, deviceMetricsSchema);
+export async function getDeviceMetrics(deviceId: string | number, from?: string, to?: string): Promise<DeviceMetricsPayload> {
+  const params = new URLSearchParams();
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  const qs = params.toString();
+  return getValidated(`/devices/${deviceId}/metrics${qs ? `?${qs}` : ""}`, deviceMetricsSchema);
 }
 
 export async function updateTicketStatus(

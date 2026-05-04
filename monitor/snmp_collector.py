@@ -31,6 +31,13 @@ OID_CPU_LOAD      = "1.3.6.1.2.1.25.3.3.1.2"  # hrProcessorLoad table
 OID_IF_IN_OCTETS  = "1.3.6.1.2.1.2.2.1.10"    # ifInOctets table
 OID_IF_OUT_OCTETS = "1.3.6.1.2.1.2.2.1.16"    # ifOutOctets table
 
+# Printer MIB OIDs — RFC 3805 (Printer MIB v2)
+OID_TONER_LEVEL    = "1.3.6.1.2.1.43.11.1.1.9.1.1"  # prtMarkerSuppliesLevel
+OID_TONER_MAX      = "1.3.6.1.2.1.43.11.1.1.8.1.1"  # prtMarkerSuppliesMaxCapacity
+OID_PAPER_LEVEL    = "1.3.6.1.2.1.43.8.2.1.10.1.1"  # prtInputCurrentLevel
+OID_PAPER_MAX      = "1.3.6.1.2.1.43.8.2.1.9.1.1"   # prtInputMaxCapacity
+OID_DRUM_STATUS    = "1.3.6.1.2.1.43.11.1.1.9.1.2"  # prtMarkerSuppliesLevel (drum cartridge)
+
 # ---- Library import (optional dependency) ----
 
 # pysnmp is an optional dependency — the monitor runs without it.
@@ -91,7 +98,7 @@ async def _walk(ip, oid):
 
 # ---- Metric collection ----
 
-async def _collect_async(ip):
+async def _collect_async(ip, device_type="server"):
     """Gather all SNMP metrics for a single device asynchronously."""
     metrics = []
 
@@ -100,38 +107,75 @@ async def _collect_async(ip):
     if uptime is not None:
         metrics.append({"type": "snmp_uptime", "value": round(int(uptime) / 100.0, 1), "unit": "s"})
 
-    # CPU load: average across all processor entries in the hrProcessorLoad table.
-    cpu_values = await _walk(ip, OID_CPU_LOAD)
-    if cpu_values:
-        metrics.append({
-            "type": "snmp_cpu",
-            "value": round(sum(cpu_values) / len(cpu_values), 2),
-            "unit": "%",
-        })
+    if device_type == "printer":
+        # Toner level: expressed as % of max capacity.
+        toner_cur = await _get(ip, OID_TONER_LEVEL)
+        toner_max = await _get(ip, OID_TONER_MAX)
+        if toner_cur is not None and toner_max is not None:
+            max_val = int(toner_max)
+            if max_val > 0:
+                metrics.append({
+                    "type": "toner_level",
+                    "value": round(int(toner_cur) / max_val * 100, 1),
+                    "unit": "%",
+                })
 
-    # Interface traffic: sum octets across all interfaces for a device-wide total.
-    in_octets = await _walk(ip, OID_IF_IN_OCTETS)
-    if in_octets:
-        metrics.append({"type": "snmp_if_in_octets", "value": sum(in_octets), "unit": "bytes"})
+        # Drum status: expressed as % of max capacity.
+        drum_cur = await _get(ip, OID_DRUM_STATUS)
+        if drum_cur is not None and toner_max is not None:
+            max_val = int(toner_max)
+            if max_val > 0:
+                metrics.append({
+                    "type": "drum_health",
+                    "value": round(int(drum_cur) / max_val * 100, 1),
+                    "unit": "%",
+                })
 
-    out_octets = await _walk(ip, OID_IF_OUT_OCTETS)
-    if out_octets:
-        metrics.append({"type": "snmp_if_out_octets", "value": sum(out_octets), "unit": "bytes"})
+        # Paper level: expressed as % of tray capacity.
+        paper_cur = await _get(ip, OID_PAPER_LEVEL)
+        paper_max = await _get(ip, OID_PAPER_MAX)
+        if paper_cur is not None and paper_max is not None:
+            max_val = int(paper_max)
+            if max_val > 0:
+                metrics.append({
+                    "type": "paper_level",
+                    "value": round(int(paper_cur) / max_val * 100, 1),
+                    "unit": "%",
+                })
+    else:
+        # CPU load: average across all processor entries in the hrProcessorLoad table.
+        cpu_values = await _walk(ip, OID_CPU_LOAD)
+        if cpu_values:
+            metrics.append({
+                "type": "snmp_cpu",
+                "value": round(sum(cpu_values) / len(cpu_values), 2),
+                "unit": "%",
+            })
+
+        # Interface traffic: sum octets across all interfaces, converted to GB for readability.
+        in_octets = await _walk(ip, OID_IF_IN_OCTETS)
+        if in_octets:
+            metrics.append({"type": "snmp_if_in_octets", "value": round(sum(in_octets) / (1024 ** 3), 2), "unit": "GB"})
+
+        out_octets = await _walk(ip, OID_IF_OUT_OCTETS)
+        if out_octets:
+            metrics.append({"type": "snmp_if_out_octets", "value": round(sum(out_octets) / (1024 ** 3), 2), "unit": "GB"})
 
     return metrics
 
 
-def collect_snmp_metrics(ip):
+def collect_snmp_metrics(ip, device_type="server"):
     """Query standard SNMP OIDs from a network device.
 
     Returns a list of metric dicts ready for the backend ingest API.
     Returns [] if SNMP is disabled, unavailable, or the device doesn't respond.
+    Collects printer-specific OIDs (toner, drum, paper) when device_type is 'printer'.
     """
     if not SNMP_ENABLED or not _SNMP_AVAILABLE:
         return []
 
     try:
-        metrics = asyncio.run(_collect_async(ip))
+        metrics = asyncio.run(_collect_async(ip, device_type))
     except Exception as e:
         print(f"[SNMP] Error querying {ip}: {e}")
         return []

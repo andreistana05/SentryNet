@@ -1,3 +1,8 @@
+// alarm.go is the core of the monitoring platform. It handles:
+//   - Tiered metric threshold evaluation (Low / Medium / High with sustained-breach timers)
+//   - The ITIL escalation chain: alarm → incident → ticket → problem
+//   - Auto-closing alarms and cascading that close to their incidents and tickets
+//   - A background worker that marks devices offline when heartbeats stop arriving
 package service
 
 import (

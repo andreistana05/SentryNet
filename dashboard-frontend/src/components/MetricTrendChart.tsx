@@ -1,5 +1,6 @@
 import { Activity } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+<<<<<<< HEAD
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatMetricValue } from "../lib/formatters";
 import type { MetricTrendViewModel } from "../types/domain";
@@ -10,6 +11,18 @@ const rangeOptions: Array<{ key: MetricTrendRange; label: string; ms: number }> 
   { key: "7d", label: "7Days", ms: 7 * 24 * 60 * 60 * 1000 },
   { key: "1d", label: "1Day", ms: 24 * 60 * 60 * 1000 },
   { key: "1h", label: "1Hour", ms: 60 * 60 * 1000 },
+=======
+import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { formatMetricValue } from "../lib/formatters";
+import type { MetricTrendViewModel } from "../types/domain";
+
+export type MetricTrendRange = "7d" | "1d" | "1h";
+
+const rangeOptions: Array<{ key: MetricTrendRange; label: string; ms: number }> = [
+  { key: "7d", label: "7 Day", ms: 7 * 24 * 60 * 60 * 1000 },
+  { key: "1d", label: "1 Day", ms: 24 * 60 * 60 * 1000 },
+  { key: "1h", label: "1 Hour", ms: 60 * 60 * 1000 },
+>>>>>>> 76839a183ddcb290d1364dbf5e19f053b1874839
 ];
 
 const fallbackRangeLabels: Record<MetricTrendRange, string[]> = {
@@ -21,6 +34,11 @@ const fallbackRangeLabels: Record<MetricTrendRange, string[]> = {
 interface MetricTrendChartProps {
   data: MetricTrendViewModel;
   loading: boolean;
+<<<<<<< HEAD
+=======
+  range: MetricTrendRange;
+  onRangeChange: (range: MetricTrendRange) => void;
+>>>>>>> 76839a183ddcb290d1364dbf5e19f053b1874839
 }
 
 function formatRangeTime(timestamp: number | undefined, range: MetricTrendRange, fallback: string): string {
@@ -33,8 +51,25 @@ function formatRangeTime(timestamp: number | undefined, range: MetricTrendRange,
   return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(timestamp));
 }
 
+<<<<<<< HEAD
 function MetricTrendChart({ data, loading }: MetricTrendChartProps) {
   const [range, setRange] = useState<MetricTrendRange>("1h");
+=======
+function formatTooltipTime(label: string | number, range: MetricTrendRange, hasHistory: boolean): string {
+  if (!hasHistory) return String(label);
+
+  const timestamp = Number(label);
+  if (!Number.isFinite(timestamp)) return String(label);
+
+  if (range === "7d") {
+    return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric" }).format(new Date(timestamp));
+  }
+
+  return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(timestamp));
+}
+
+function MetricTrendChart({ data, loading, range, onRangeChange }: MetricTrendChartProps) {
+>>>>>>> 76839a183ddcb290d1364dbf5e19f053b1874839
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -89,7 +124,11 @@ function MetricTrendChart({ data, loading }: MetricTrendChartProps) {
                 key={entry.key}
                 type="button"
                 className={range === entry.key ? "is-active" : ""}
+<<<<<<< HEAD
                 onClick={() => setRange(entry.key)}
+=======
+                onClick={() => onRangeChange(entry.key)}
+>>>>>>> 76839a183ddcb290d1364dbf5e19f053b1874839
                 aria-pressed={range === entry.key}
               >
                 {entry.label}
@@ -114,7 +153,19 @@ function MetricTrendChart({ data, loading }: MetricTrendChartProps) {
             <ResponsiveContainer width="100%" height={340}>
               <LineChart data={visiblePoints} margin={{ top: 12, right: 16, left: -18, bottom: 0 }}>
                 <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
+<<<<<<< HEAD
                 <XAxis dataKey="time" tick={{ fill: "var(--chart-tick)", fontSize: 12 }} axisLine={false} tickLine={false} />
+=======
+                <XAxis
+                  dataKey={data.hasHistory ? "timestamp" : "time"}
+                  type={data.hasHistory ? "number" : "category"}
+                  domain={data.hasHistory ? ["dataMin", "dataMax"] : undefined}
+                  tick={{ fill: "var(--chart-tick)", fontSize: 12 }}
+                  tickFormatter={(value) => data.hasHistory ? formatRangeTime(Number(value), range, String(value)) : String(value)}
+                  axisLine={false}
+                  tickLine={false}
+                />
+>>>>>>> 76839a183ddcb290d1364dbf5e19f053b1874839
                 <YAxis
                   domain={["auto", "auto"]}
                   tick={{ fill: "var(--chart-tick)", fontSize: 12 }}
@@ -125,6 +176,10 @@ function MetricTrendChart({ data, loading }: MetricTrendChartProps) {
                 />
                 <Tooltip
                   formatter={(value) => [formatMetricValue(Number(value ?? 0), selectedSeries.unit), selectedSeries.label]}
+<<<<<<< HEAD
+=======
+                  labelFormatter={(label) => formatTooltipTime(label, range, data.hasHistory)}
+>>>>>>> 76839a183ddcb290d1364dbf5e19f053b1874839
                   contentStyle={{
                     background: "var(--chart-tooltip-bg)",
                     border: "1px solid rgba(148, 163, 184, 0.16)",
@@ -134,6 +189,24 @@ function MetricTrendChart({ data, loading }: MetricTrendChartProps) {
                   itemStyle={{ color: "var(--chart-tooltip-text)" }}
                   labelStyle={{ color: "var(--chart-tooltip-label)" }}
                 />
+<<<<<<< HEAD
+=======
+                {selectedSeries.thresholdValue !== null ? (
+                  <ReferenceLine
+                    y={selectedSeries.thresholdValue}
+                    stroke="var(--chart-threshold)"
+                    strokeDasharray="6 6"
+                    strokeWidth={2}
+                    label={{
+                      value: `High ${formatMetricValue(selectedSeries.thresholdValue, selectedSeries.unit)}`,
+                      position: "insideTopRight",
+                      fill: "var(--chart-threshold-text)",
+                      fontSize: 12,
+                      fontWeight: 800,
+                    }}
+                  />
+                ) : null}
+>>>>>>> 76839a183ddcb290d1364dbf5e19f053b1874839
                 <Line
                   key={selectedSeries.key}
                   type="monotone"
@@ -141,6 +214,10 @@ function MetricTrendChart({ data, loading }: MetricTrendChartProps) {
                   name={selectedSeries.label}
                   stroke={selectedSeries.color}
                   strokeWidth={3}
+<<<<<<< HEAD
+=======
+                  connectNulls
+>>>>>>> 76839a183ddcb290d1364dbf5e19f053b1874839
                   dot={false}
                   activeDot={{ r: 5, strokeWidth: 0 }}
                 />

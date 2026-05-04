@@ -41,4 +41,6 @@ config.json
 
 .github/
 
+# LLM's
 .codex
+.claude

@@ -133,12 +133,21 @@ export interface MetricTrendSeries {
   current: number;
   displayValue: string;
   unit: string;
+<<<<<<< HEAD
+=======
+  thresholdValue: number | null;
+  thresholdLabel: string;
+>>>>>>> 76839a183ddcb290d1364dbf5e19f053b1874839
 }
 
 export interface MetricTrendPoint {
   time: string;
   timestamp?: number;
+<<<<<<< HEAD
   [key: string]: string | number;
+=======
+  [key: string]: string | number | undefined;
+>>>>>>> 76839a183ddcb290d1364dbf5e19f053b1874839
 }
 
 export interface MetricTrendViewModel {

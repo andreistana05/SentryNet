@@ -40,26 +40,6 @@ function Login() {
           <ThemeToggle />
         </div>
 
-        <div className="auth-showcase">
-          <span className="eyebrow">Operational Awareness</span>
-          <h1>See the health of your infrastructure before issues spread.</h1>
-          <p>
-            SentryNet brings devices, alerts, and status telemetry into one interface
-            that feels crisp, modern, and built for fast decisions.
-          </p>
-
-          <div className="auth-feature-list">
-            <div>
-              <strong>Live fleet visibility</strong>
-              <span>Know what is online, offline, or drifting in real time.</span>
-            </div>
-            <div>
-              <strong>Alert-first workflow</strong>
-              <span>Surface operational risk without hunting across screens.</span>
-            </div>
-          </div>
-        </div>
-
         <div className="auth-card">
           <div className="auth-card-header">
             <span className="eyebrow">Welcome Back</span>

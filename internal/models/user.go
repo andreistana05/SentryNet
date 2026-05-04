@@ -1,3 +1,6 @@
+// user.go defines the User model and the UserRole enumeration (admin, operator,
+// viewer). Users are dashboard accounts only — agents authenticate with an API
+// key, not a user record.
 package models
 
 import (

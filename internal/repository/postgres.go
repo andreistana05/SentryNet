@@ -1,97 +1,155 @@
+// postgres.go sets up the GORM PostgreSQL connection, runs schema migrations,
+// and provides the Repositories container that wires every repository
+// implementation together. This is the only file that knows about the
+// underlying database driver — the rest of the app uses interfaces.
 package repository
 
 import (
-	"fmt"
+	"database/sql"
+	"errors"
 
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
-
-	"sentrynet/backend/internal/models"
+	"github.com/google/uuid"
 )
 
-// NewPostgres opens a GORM connection to PostgreSQL using the given DSN and
-// configures the connection pool (max 25 open, 10 idle connections).
-func NewPostgres(dsn string) (*gorm.DB, error) {
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
-	}
+var ErrNotFound = errors.New("record not found")
 
-	sqlDB, err := db.DB()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get sql.DB: %w", err)
-	}
-	sqlDB.SetMaxOpenConns(25)
-	sqlDB.SetMaxIdleConns(10)
+// nullUUID handles scanning nullable UUID columns (e.g. alarm_id on incidents)
+type nullUUID struct {
+	UUID  uuid.UUID
+	Valid bool
+}
 
+func (n *nullUUID) Scan(value any) error {
+	if value == nil {
+		n.Valid = false
+		return nil
+	}
+	n.Valid = true
+	return n.UUID.Scan(value)
+}
+
+type rowScanner interface{ Scan(dest ...any) error }
+
+func Postgres(dsn string) (*sql.DB, error) {
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		return nil, err
+	}
+	if err := db.Ping(); err != nil {
+		return nil, err
+	}
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(10)
 	return db, nil
 }
 
-// Migrate runs GORM auto-migration for all models.
-func Migrate(db *gorm.DB) error {
-	// Pre-migration: for existing databases, add alarm_number to old alarm rows
-	// before GORM enforces NOT NULL. Fresh databases do not have alarms yet, so
-	// AutoMigrate will create the table with the current model definition below.
-	if err := db.Exec(`
-		DO $$
-		BEGIN
-			IF EXISTS (
-				SELECT 1 FROM information_schema.tables
-				WHERE table_schema = CURRENT_SCHEMA()
-				  AND table_name   = 'alarms'
-			) AND NOT EXISTS (
-				SELECT 1 FROM information_schema.columns
-				WHERE table_schema = CURRENT_SCHEMA()
-				  AND table_name   = 'alarms'
-				  AND column_name  = 'alarm_number'
-			) THEN
-				-- Add as nullable first to accommodate existing rows.
-				ALTER TABLE alarms ADD COLUMN alarm_number varchar(20);
-				-- Populate with unique sequential numbers (ALM0001, ALM0002, …).
-				UPDATE alarms
-				   SET alarm_number = 'ALM' || LPAD(CAST(seq AS TEXT), 4, '0')
-				  FROM (
-				       SELECT id, ROW_NUMBER() OVER (ORDER BY submit_date, id) AS seq
-				         FROM alarms
-				       ) ranked
-				 WHERE alarms.id = ranked.id;
-				-- Now safe to add NOT NULL.
-				ALTER TABLE alarms ALTER COLUMN alarm_number SET NOT NULL;
-			END IF;
-		END $$;
-	`).Error; err != nil {
-		return fmt.Errorf("pre-migrate alarm_number: %w", err)
-	}
-
-	return db.AutoMigrate(
-		&models.User{},
-		&models.Device{},
-		&models.Metric{},
-		&models.Alarm{},
-		&models.Incident{},
-		&models.Problem{},
-		&models.Ticket{},
-		&models.TicketUpdate{},
-		&models.TicketNote{},
-	)
+func Migrate(db *sql.DB) error {
+	_, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS users (
+			id				UUID			PRIMARY KEY,
+			username		VARCHAR(100) 	NOT NULL UNIQUE,
+			email			VARCHAR(255)	NOT NULL UNIQUE,
+			password_hash	VARCHAR			NOT NULL,
+			role			VARCHAR(20)		NOT NULL, DEFAULT 'viewer',
+			created_at		TIMESTAMPTZ		NOT NULL DEFAULT NOW(),
+			updated_at		TIMESTAMPTZ		NOT NULL DEFAULT NOW()
+		);
+		CREATE TABLE IF NOT EXISTS devices (
+			id			UUID			PRIMARY KEY,
+			name		VARCHAR(255)	NOT NULL,
+			type		VARCHAR(20)		NOT NULL,
+			hostname	VARCHAR(255),
+			ip_address	VARCHAR(45)		UNIQUE,
+			status		VARCHAR(20)		NOT NULL DEFAULT 'unknown',
+			description	VARCHAR(500),
+			location	VARCHAR(255),
+			last_seen	TIMESTAMPTZ,
+			created_at	TIMESTAMPTZ		NOT NULL DEFAULT NOW(),
+			updated_at	TIMESTAMPTZ		NOT NULL DEFAULT NOW()
+		);
+		CREATE TABLE IF NOT EXISTS metrics (
+			id			UUID		PRIMARY KEY,
+			device_id	UUID		NOT NULL REFERENCES devices(id),
+			type		VARCHAR(50)	NOT NULL,
+			value		FLOAT8		NOT NULL
+			unit		VARCHAR(64),
+			timestamp	TIMESTAMPTZ	NOT NULL
+		);
+		CREATE TABLE IF NOT EXISTS alarms (
+			id					UUID			PRIMARY KEY,
+			alarm_number		VARCHAR(20)		NOT NULL UNIQUE,
+			alarm				VARCHAR(255)	NOT NULL,
+			hyperlink			VARCHAR(500),
+			status				VARCHAR(20)		NOT NULL DEFAULT 'Open',
+			submit_date			TIMESTAMPTZ		NOT NULL DEFAULT NOW(),
+			last_modified_date	TIMESTAMPTZ 	NOT NULL DEFAULT NOW(),
+			close_date			TIMESTAMPTZ,
+			priority			VARCHAR(10)		NOT NULL,
+			assigned_group		VARCHAR(255),
+			assigned_person		VARCHAR(255)
+		);
+		CREATE TABLE IF NOT EXISTS incidents (
+			id					UUID			PRIMARY KEY,
+			incident_number		VARCHAR(20)		NOT NULL UNIQUE,
+			alarm_id			UUID			REFERENCES alarms(id),
+			hyperlink			VARCHAR(500),
+			description			VARCHAR(1000)	NOT NULL,
+			status				VARCHAR(20)		NOT NULL DEFAULT 'Open',
+			submit_date			TIMESTAMPTZ		NOT NULL DEFAULT NOW(),
+			last_modified_date	TIMESTAMPTZ		NOT NULL DEFAULT NOW(),
+			close_date			TIMESTAMPTZ,
+			priority			VARCHAR(10)		NOT NULL,
+			assigned_group		VARCHAR(255),
+			assigned_person		VARCHAR(255)
+		);
+		CREATE TABLE IF NOT EXISTS problems (
+			id					UUID			PRIMARY KEY,
+			problem_number		VARCHAR(20)		NOT NULL UNIQUE,
+			alarm_name			VARCHAR(255)	NOT NULL,
+			incident_id			UUID			REFERENCES incidents(id),
+			hyperlink			VARCHAR(500),
+			description			VARCHAR(1000)	NOT NULL,
+			status				VARCHAR(20)		NOT NULL DEFAULT 'Open',
+			submit_date			TIMESTAMPTZ		NOT NULL DEFAULT NOW(),
+			last_modified_date	TIMESTAMPTZ		NOT NULL DEFAULT NOW(),
+			close_date			TIMESTAMPTZ,
+			priority			VARCHAR(10)		NOT NULL,
+			assigned_group		VARCHAR(255),
+			assigned_person		VARCHAR(255),
+			occurence_count		INT				NOT NULL DEFAULT 1
+		);
+		CREATE TABLE IF NOT EXISTS tickets (
+			id					UUID			PRIMARY KEY,
+			ticket_number		VARCHAR(20)		NOT NULL UNIQUE,
+			incident_id			UUID			NOT NULL UNIQUE REFERENCES incidents(id),
+			title				VARCHAR(255)	NOT NULL,
+			status				VARCHAR(20)		NOT NULL DEFAULT 'Open',
+			priority			VARCHAR(10)		NOT NULL,
+			assigned_group		VARCHAR(255),
+			assigned_person		VARCHAR(255),
+			submit_date			TIMESTAMPTZ		NOT NULL DEFAULT NOW(),
+			last_modified_date	TIMESTAMPTZ		NOT NULL DEFAULT NOW(),
+			close_date			TIMESTAMPTZ
+		);
+		CREATE TABLE IF NOT EXISTS ticket_updates (
+			id			UUID			PRIMARY KEY,
+			ticket_id	UUID			NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+			event_type	VARCHAR(30)		NOT NULL,
+			description	VARCHAR(500)	NOT NULL,
+			timestamp	TIMESTAMPTZ		NOT NULL DEFAULT NOW()
+		);
+		CREATE TABLE IF NOT EXISTS ticket_notes (
+			id			UUID			PRIMARY KEY,
+			ticket_id	UUID			NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+			body		TEXT			NOT NULL,
+			author_name	VARCHAR(255)	NOT NULL,
+			created_at	TIMESTAMPTZ		NOT NULL DEFAULT NOW()
+		);
+	`)
+	return err
 }
 
-// Repositories is a container for all repository implementations.
-type Repositories struct {
-	User     UserRepository
-	Device   DeviceRepository
-	Metric   MetricRepository
-	Alarm    AlarmRepository
-	Incident IncidentRepository
-	Problem  ProblemRepository
-	Ticket   TicketRepository
-}
-
-// NewRepositories wires concrete PostgreSQL implementations for every repository interface.
-func NewRepositories(db *gorm.DB) *Repositories {
+func NewRepositories(db *sql.DB) *Repositories {
 	return &Repositories{
 		User:     newUserRepository(db),
 		Device:   newDeviceRepository(db),

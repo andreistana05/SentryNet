@@ -1,3 +1,5 @@
+// logger.go provides a Gin middleware that logs each HTTP request with its
+// method, path, response status code, and how long it took to handle.
 package middleware
 
 import (

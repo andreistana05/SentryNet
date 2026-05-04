@@ -1,3 +1,6 @@
+// metric.go defines the Metric model and the MetricType enumeration that
+// covers every measurement the agents and network monitor can report
+// (CPU, RAM, disk, latency, packet loss, etc.).
 package models
 
 import (

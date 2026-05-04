@@ -599,6 +599,11 @@
 }
 
 .metric-trend-panel {
+<<<<<<< HEAD
+=======
+  --chart-threshold: rgba(251, 113, 133, 0.72);
+  --chart-threshold-text: var(--rose);
+>>>>>>> 76839a183ddcb290d1364dbf5e19f053b1874839
   min-height: 430px;
 }
 
@@ -1067,8 +1072,49 @@ a.metric-card:focus-visible {
   justify-items: end;
 }
 
+.table-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .table-summary strong {
   font-size: 1.8rem;
+}
+
+.panel-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 2.45rem;
+  height: 2.45rem;
+  flex: 0 0 auto;
+  color: var(--cyan);
+  background: rgba(103, 232, 249, 0.08);
+  border: 1px solid rgba(103, 232, 249, 0.2);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.panel-toggle:hover,
+.panel-toggle:focus-visible {
+  background: rgba(103, 232, 249, 0.14);
+  border-color: rgba(103, 232, 249, 0.32);
+  box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.12);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.panel-toggle-icon {
+  transition: transform 180ms ease;
+}
+
+.panel-toggle[aria-expanded="false"] .panel-toggle-icon {
+  transform: rotate(-90deg);
+}
+
+.collapsible-panel-body[hidden] {
+  display: none;
 }
 
 .table-scroll {
@@ -1694,13 +1740,14 @@ a.metric-card:focus-visible {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1.16fr) minmax(420px, 500px);
+  grid-template-columns: minmax(0, 500px);
   grid-template-areas:
-    "topbar topbar"
-    "showcase card";
-  gap: 1rem 1.1rem;
+    "topbar"
+    "card";
+  gap: 1rem;
   align-items: stretch;
-  width: min(1320px, 100%);
+  justify-content: center;
+  width: min(560px, 100%);
 }
 
 .auth-topbar {
@@ -1786,7 +1833,6 @@ a.metric-card:focus-visible {
 
 .auth-card {
   grid-area: card;
-  align-self: center;
   max-width: 500px;
   width: 100%;
 }

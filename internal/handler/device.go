@@ -1,3 +1,5 @@
+// device.go exposes HTTP endpoints for device inventory management (CRUD)
+// and metric retrieval. Routes are registered under /api/v1/devices by the router.
 package handler
 
 import (
@@ -180,6 +182,10 @@ func (h *DeviceHandler) Delete(c *gin.Context) {
 
 // GetMetrics godoc
 // GET /api/v1/devices/:id/metrics
+//
+// Without query params: returns the latest reading per metric type.
+// With ?from=<RFC3339>&to=<RFC3339>: returns all readings in the time range,
+// ordered oldest-first so the chart can be plotted chronologically.
 func (h *DeviceHandler) GetMetrics(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -189,6 +195,34 @@ func (h *DeviceHandler) GetMetrics(c *gin.Context) {
 
 	if _, err := h.devices.Get(id); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "device not found"})
+		return
+	}
+
+	rawFrom := c.Query("from")
+	if rawFrom != "" {
+		from, err := time.Parse(time.RFC3339, rawFrom)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid 'from': use RFC3339 format"})
+			return
+		}
+
+		filter := repository.MetricFilter{From: from}
+
+		if rawTo := c.Query("to"); rawTo != "" {
+			to, err := time.Parse(time.RFC3339, rawTo)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid 'to': use RFC3339 format"})
+				return
+			}
+			filter.To = to
+		}
+
+		metrics, err := h.metrics.GetByDevice(id, filter)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"data": metrics, "count": len(metrics)})
 		return
 	}
 
