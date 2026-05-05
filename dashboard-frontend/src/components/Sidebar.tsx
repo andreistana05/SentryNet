@@ -20,51 +20,53 @@ function Sidebar({
   onToggle,
 }: SidebarProps) {
   const links = [
-    { label: "Overview", to: "/dashboard" },
-    { label: "Metrics", to: "/dashboard/metrics" },
-    { label: "Alarms", to: "/dashboard/alarms" },
-    { label: "Incidents", to: "/dashboard/incidents" },
-    { label: "Tickets", to: "/dashboard/tickets" },
-    { label: "Problems", to: "/dashboard/problems" },
+    { label: "Overview", to: "/dashboard", end: true },
+    { label: "Metrics", to: "/dashboard/metrics", end: false },
+    { label: "Alarms", to: "/dashboard/alarms", end: false },
+    { label: "Incidents", to: "/dashboard/incidents", end: false },
+    { label: "Tickets", to: "/dashboard/tickets", end: false },
+    { label: "Problems", to: "/dashboard/problems", end: false },
   ];
 
   return (
-    <div className="sidebar-shell">
-      <button
-        type="button"
-        className={`sidebar-toggle ${isCollapsed ? "is-collapsed" : "is-open"}`}
-        onClick={onToggle}
-        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        aria-expanded={!isCollapsed}
-      >
-        <span className={`sidebar-toggle-chevron ${isCollapsed ? "points-right" : "points-left"}`} />
-      </button>
-
-      <aside className={`sidebar ${isCollapsed ? "collapsed" : "open"}`}>
-        <div className="sidebar-scroll">
-          <div className="sidebar-header">
-            <div className="brand-block">
-              <div className="brand-mark">SN</div>
+    <aside className="sidebar">
+      <div className="sidebar-scroll">
+        <div className="sidebar-header">
+          <div className="brand-block">
+            <div className="brand-mark">SN</div>
+            {!isCollapsed && (
               <div className="brand-copy">
-                <span className="eyebrow">Mission Control</span>
                 <h2>SentryNet</h2>
               </div>
-            </div>
+            )}
           </div>
+          <button
+            type="button"
+            className="sidebar-toggle"
+            onClick={onToggle}
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-expanded={!isCollapsed}
+          >
+            <span className={`sidebar-toggle-chevron ${isCollapsed ? "points-right" : "points-left"}`} />
+          </button>
+        </div>
 
-          <nav className="sidebar-nav" aria-label="Primary">
-            {links.map((link) => (
-              <NavLink
-                key={link.label}
-                to={link.to}
-                className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
-              >
-                <span className="sidebar-link-dot" />
-                <span className="sidebar-link-label">{link.label}</span>
-              </NavLink>
-            ))}
-          </nav>
+        <nav className="sidebar-nav" aria-label="Primary">
+          {links.map((link) => (
+            <NavLink
+              key={link.label}
+              to={link.to}
+              end={link.end}
+              className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+              title={link.label}
+            >
+              <span className="sidebar-link-dot" />
+              {!isCollapsed && <span className="sidebar-link-label">{link.label}</span>}
+            </NavLink>
+          ))}
+        </nav>
 
+        {!isCollapsed && (
           <div className="sidebar-summary">
             <span className="eyebrow sidebar-summary-title">Network Pulse</span>
             <div className="summary-grid summary-grid-extended">
@@ -90,9 +92,9 @@ function Sidebar({
               </div>
             </div>
           </div>
-        </div>
-      </aside>
-    </div>
+        )}
+      </div>
+    </aside>
   );
 }
 

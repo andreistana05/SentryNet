@@ -1,20 +1,12 @@
-// device.go defines the Device model and its associated DeviceType and
-// DeviceStatus enumerations. A Device represents any monitored network node
-// (server, router, switch, printer, or workstation) in the infrastructure.
 package models
 
 import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
-// DeviceType classifies an infrastructure device by its function.
 type DeviceType string
-
-// DeviceStatus reflects the last-known reachability state of a device.
-// It is set to online by heartbeats and to offline by the background stale-checker.
 type DeviceStatus string
 
 const (
@@ -31,25 +23,16 @@ const (
 	DeviceStatusUnknown DeviceStatus = "unknown"
 )
 
-// Device represents a monitored network node. IPAddress has a unique index
-// because EnsureDevice resolves devices by IP during agent and monitor ingestion.
 type Device struct {
-	ID          uuid.UUID    `gorm:"type:uuid;primaryKey" json:"id"`
-	Name        string       `gorm:"not null;size:255" json:"name"`
-	Type        DeviceType   `gorm:"type:varchar(20);not null" json:"type"`
-	Hostname    string       `gorm:"size:255;index" json:"hostname"`
-	IPAddress   string       `gorm:"size:45;uniqueIndex" json:"ip_address"`
-	Status      DeviceStatus `gorm:"type:varchar(20);not null;default:'unknown'" json:"status"`
-	Description string       `gorm:"size:500" json:"description,omitempty"`
-	Location    string       `gorm:"size:255" json:"location,omitempty"`
+	ID          uuid.UUID    `json:"id"`
+	Name        string       `json:"name"`
+	Type        DeviceType   `json:"type"`
+	Hostname    string       `json:"hostname"`
+	IPAddress   string       `json:"ip_address"`
+	Status      DeviceStatus `json:"status"`
+	Description string       `json:"description,omitempty"`
+	Location    string       `json:"location,omitempty"`
 	LastSeen    *time.Time   `json:"last_seen,omitempty"`
 	CreatedAt   time.Time    `json:"created_at"`
 	UpdatedAt   time.Time    `json:"updated_at"`
-}
-
-func (d *Device) BeforeCreate(_ *gorm.DB) error {
-	if d.ID == uuid.Nil {
-		d.ID = uuid.New()
-	}
-	return nil
 }

@@ -23,9 +23,9 @@ function FleetStatusChart({ data, loading }: FleetStatusChartProps) {
       {!loading && data.length > 0 ? (
         <div className="chart-shell">
           <div className="chart-canvas">
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height={160}>
               <PieChart>
-                <Pie data={data} dataKey="value" nameKey="name" innerRadius={72} outerRadius={108} paddingAngle={4}>
+                <Pie data={data} dataKey="value" nameKey="name" innerRadius={40} outerRadius={65} paddingAngle={4}>
                   {data.map((entry) => (
                     <Cell key={entry.name} fill={entry.color} stroke={chartPalette.cyanSoft} />
                   ))}
