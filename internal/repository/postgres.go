@@ -9,6 +9,7 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 var ErrNotFound = errors.New("record not found")
@@ -42,7 +43,7 @@ func (n *nullUUID) Scan(value any) error {
 type rowScanner interface{ Scan(dest ...any) error }
 
 func NewPostgres(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
 	}

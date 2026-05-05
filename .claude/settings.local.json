@@ -31,7 +31,8 @@
       "PowerShell(netsh interface ipv4 show excludedportrange protocol=tcp)",
       "PowerShell(net stop winnat)",
       "PowerShell(net start winnat)",
-      "PowerShell(netsh interface ipv4 show dynamicport tcp)"
+      "PowerShell(netsh interface ipv4 show dynamicport tcp)",
+      "Bash(Select-String -Pattern \"postgres|pq|pgx\" go.mod)"
     ]
   }
 }
