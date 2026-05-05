@@ -13,6 +13,17 @@ import (
 
 var ErrNotFound = errors.New("record not found")
 
+// Repositories groups every repository interface in one convenient container.
+type Repositories struct {
+	User     UserRepository
+	Device   DeviceRepository
+	Metric   MetricRepository
+	Alarm    AlarmRepository
+	Incident IncidentRepository
+	Problem  ProblemRepository
+	Ticket   TicketRepository
+}
+
 // nullUUID handles scanning nullable UUID columns (e.g. alarm_id on incidents)
 type nullUUID struct {
 	UUID  uuid.UUID
@@ -30,7 +41,7 @@ func (n *nullUUID) Scan(value any) error {
 
 type rowScanner interface{ Scan(dest ...any) error }
 
-func Postgres(dsn string) (*sql.DB, error) {
+func NewPostgres(dsn string) (*sql.DB, error) {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, err
@@ -50,7 +61,7 @@ func Migrate(db *sql.DB) error {
 			username		VARCHAR(100) 	NOT NULL UNIQUE,
 			email			VARCHAR(255)	NOT NULL UNIQUE,
 			password_hash	VARCHAR			NOT NULL,
-			role			VARCHAR(20)		NOT NULL, DEFAULT 'viewer',
+			role			VARCHAR(20)		NOT NULL DEFAULT 'viewer',
 			created_at		TIMESTAMPTZ		NOT NULL DEFAULT NOW(),
 			updated_at		TIMESTAMPTZ		NOT NULL DEFAULT NOW()
 		);
@@ -71,7 +82,7 @@ func Migrate(db *sql.DB) error {
 			id			UUID		PRIMARY KEY,
 			device_id	UUID		NOT NULL REFERENCES devices(id),
 			type		VARCHAR(50)	NOT NULL,
-			value		FLOAT8		NOT NULL
+			value		FLOAT8		NOT NULL,
 			unit		VARCHAR(64),
 			timestamp	TIMESTAMPTZ	NOT NULL
 		);
@@ -116,7 +127,7 @@ func Migrate(db *sql.DB) error {
 			priority			VARCHAR(10)		NOT NULL,
 			assigned_group		VARCHAR(255),
 			assigned_person		VARCHAR(255),
-			occurence_count		INT				NOT NULL DEFAULT 1
+			occurrence_count	INT				NOT NULL DEFAULT 1
 		);
 		CREATE TABLE IF NOT EXISTS tickets (
 			id					UUID			PRIMARY KEY,
