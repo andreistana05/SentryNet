@@ -17,9 +17,7 @@ interface DeviceTableProps {
 }
 
 function DeviceTable({ devices, loading, error, totalDevices, filteredCount }: DeviceTableProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
   const hasDevices = devices.length > 0;
-  const panelBodyId = "live-inventory-panel";
 
   return (
     <section className="table-container">
@@ -35,21 +33,10 @@ function DeviceTable({ devices, loading, error, totalDevices, filteredCount }: D
             <span>of {totalDevices} visible</span>
           </div>
 
-          <button
-            className="panel-toggle"
-            type="button"
-            aria-controls={panelBodyId}
-            aria-expanded={isExpanded}
-            aria-label={isExpanded ? "Collapse Live Inventory" : "Expand Live Inventory"}
-            title={isExpanded ? "Collapse Live Inventory" : "Expand Live Inventory"}
-            onClick={() => setIsExpanded((current) => !current)}
-          >
-            <ChevronDown aria-hidden="true" className="panel-toggle-icon" size={18} />
-          </button>
         </div>
       </div>
 
-      <div id={panelBodyId} className="collapsible-panel-body" hidden={!isExpanded}>
+      <div className="collapsible-panel-body">
         {error ? <div className="table-state error-state">{error}</div> : null}
 
         {loading ? (
@@ -86,7 +73,6 @@ function DeviceTable({ devices, loading, error, totalDevices, filteredCount }: D
                     <td>
                       <div className="device-name-cell">
                         <strong>{device.name}</strong>
-                        <span>Telemetry active</span>
                       </div>
                     </td>
                     <td>{device.type}</td>

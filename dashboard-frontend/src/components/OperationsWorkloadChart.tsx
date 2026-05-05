@@ -22,7 +22,7 @@ function OperationsWorkloadChart({ data, loading }: OperationsWorkloadChartProps
 
       {!loading && data.length > 0 ? (
         <div className="chart-canvas chart-canvas-bar">
-          <ResponsiveContainer width="100%" height={320}>
+          <ResponsiveContainer width="100%" height={160}>
             <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
               <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
               <XAxis dataKey="name" tick={{ fill: "var(--chart-tick)", fontSize: 12 }} axisLine={false} tickLine={false} />

@@ -100,8 +100,8 @@
 }
 
 html {
-  min-height: 100%;
-  overflow-x: clip;
+  height: 100%;
+  overflow: hidden;
   background:
     radial-gradient(circle at top left, var(--page-glow-left), transparent 30%),
     radial-gradient(circle at top right, var(--page-glow-right), transparent 24%),
@@ -110,10 +110,11 @@ html {
 
 body {
   margin: 0;
-  min-height: 100vh;
-  overflow-x: clip;
+  height: 100%;
+  overflow: hidden;
   color: var(--text-primary);
   background: transparent;
+  font-size: 14px;
 }
 
 a {
@@ -127,6 +128,14 @@ select {
 }
 
 #root {
-  min-height: 100vh;
-  overflow-x: clip;
+  height: 100%;
 }
+
+@media (max-width: 1080px) {
+  html, body, #root {
+    height: auto;
+    min-height: 100%;
+    overflow: auto;
+  }
+}
+
