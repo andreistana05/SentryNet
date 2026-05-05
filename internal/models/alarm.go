@@ -67,6 +67,7 @@ type Incident struct {
 	Priority         TicketPriority `json:"priority"`
 	AssignedGroup    string         `json:"assigned_group"`
 	AssignedPerson   string         `json:"assigned_person"`
+	SourceAlarm      *Alarm         `json:"source_alarm,omitempty"`
 }
 
 
@@ -87,6 +88,7 @@ type Problem struct {
 	AssignedGroup    string         `json:"assigned_group"`
 	AssignedPerson   string         `json:"assigned_person"`
 	OccurrenceCount  int            `json:"occurrence_count"`
+	SourceIncident   *Incident      `json:"source_incident,omitempty"`
 }
 
 // EventType describes what happened in a TicketUpdate entry.
@@ -114,6 +116,7 @@ type Ticket struct {
 	SubmitDate       time.Time      `json:"submit_date"`
 	LastModifiedDate time.Time      `json:"last_modified_date"`
 	CloseDate        *time.Time     `json:"close_date,omitempty"`
+	SourceIncident   *Incident      `json:"source_incident,omitempty"`
 }
 
 
