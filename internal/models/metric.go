@@ -1,49 +1,33 @@
-// metric.go defines the Metric model and the MetricType enumeration that
-// covers every measurement the agents and network monitor can report
-// (CPU, RAM, disk, latency, packet loss, etc.).
 package models
 
 import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
-// MetricType identifies the kind of measurement stored in a Metric row.
 type MetricType string
 
 const (
-	MetricCPUUsage       MetricType = "cpu_usage"
-	MetricRAMUsage       MetricType = "ram_usage"
-	MetricDiskUsage      MetricType = "disk_usage"
-	MetricNetworkIn      MetricType = "network_in"
-	MetricNetworkOut     MetricType = "network_out"
-	MetricLatency        MetricType = "latency"
-	MetricUptime         MetricType = "uptime"
-	MetricTonerLevel     MetricType = "toner_level"
-	MetricPortStatus     MetricType = "port_status"
-	MetricTemperature    MetricType = "temperature"
-	MetricPacketLoss     MetricType = "packet_loss"
-	MetricNetworkErrors  MetricType = "network_errors"
+	MetricCPUUsage      MetricType = "cpu_usage"
+	MetricRAMUsage      MetricType = "ram_usage"
+	MetricDiskUsage     MetricType = "disk_usage"
+	MetricNetworkIn     MetricType = "network_in"
+	MetricNetworkOut    MetricType = "network_out"
+	MetricLatency       MetricType = "latency"
+	MetricUptime        MetricType = "uptime"
+	MetricTonerLevel    MetricType = "toner_level"
+	MetricPortStatus    MetricType = "port_status"
+	MetricTemperature   MetricType = "temperature"
+	MetricPacketLoss    MetricType = "packet_loss"
+	MetricNetworkErrors MetricType = "network_errors"
 )
 
-// Metric stores a single time-series data point from a monitored device.
-// Unit is a free-form label (e.g. "%", "ms", "C", NIC name) that describes
-// what the value is measuring.
 type Metric struct {
-	ID        uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
-	DeviceID  uuid.UUID  `gorm:"type:uuid;not null;index" json:"device_id"`
-	Device    *Device    `gorm:"foreignKey:DeviceID" json:"device,omitempty"`
-	Type      MetricType `gorm:"type:varchar(50);not null;index" json:"type"`
-	Value     float64    `gorm:"not null" json:"value"`
-	Unit      string     `gorm:"size:64" json:"unit"`
-	Timestamp time.Time  `gorm:"not null;index" json:"timestamp"`
-}
-
-func (m *Metric) BeforeCreate(_ *gorm.DB) error {
-	if m.ID == uuid.Nil {
-		m.ID = uuid.New()
-	}
-	return nil
+	ID        uuid.UUID  `json:"id"`
+	DeviceID  uuid.UUID  `json:"device_id"`
+	Type      MetricType `json:"type"`
+	Value     float64    `json:"value"`
+	Unit      string     `json:"unit"`
+	Timestamp time.Time  `json:"timestamp"`
 }
