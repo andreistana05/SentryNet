@@ -9,7 +9,7 @@ export const thresholdProfiles: Record<string, MetricDefinition[]> = {
       label: "CPU Usage",
       unit: "%",
       accent: "rose",
-      aliases: ["cpu", "cpuusage", "cpu_usage", "cpuutilization", "cpu_utilization", "snmp_cpu", "snmpcpu"],
+      aliases: ["cpu", "cpuusage", "cpu_usage", "cpuutilization", "cpu_utilization"],
       thresholds: { low: ">=70% for 10min", medium: ">=85% for 5min", high: ">=95% for 2min" },
     },
     {
@@ -44,14 +44,6 @@ export const thresholdProfiles: Record<string, MetricDefinition[]> = {
       aliases: ["latency", "response_time", "ping", "round_trip_time"],
       thresholds: { low: ">=200ms for 5min", medium: ">=500ms for 3min", high: ">=1000ms for 1min" },
     },
-    {
-      key: "interfaceUtilization",
-      label: "Interface Traffic (in)",
-      unit: "GB",
-      accent: "cyan",
-      aliases: ["snmp_if_in_octets", "snmpifinoctets"],
-      thresholds: { low: ">=10 GB for 15min", medium: ">=50 GB for 5min", high: ">=100 GB for 2min" },
-    },
   ],
   router: [
     {
@@ -59,7 +51,7 @@ export const thresholdProfiles: Record<string, MetricDefinition[]> = {
       label: "Interface Utilization",
       unit: "%",
       accent: "cyan",
-      aliases: ["interface", "bandwidth", "throughput", "interfaceutilization", "interface_usage", "snmp_if_in_octets", "snmpifinoctets"],
+      aliases: ["interface", "bandwidth", "throughput", "interfaceutilization", "interface_usage"],
       thresholds: { low: ">=70% for 15min", medium: ">=85% for 5min", high: ">=95% for 2min" },
     },
     {
@@ -261,12 +253,6 @@ function getMetricSources(device: Device | null, metricsPayload: DeviceMetricsPa
 }
 
 function getHistorySources(device: Device | null, metricsPayload: DeviceMetricsPayload | null): unknown[] {
-<<<<<<< HEAD
-  const data = typeof metricsPayload?.data === "object" && metricsPayload?.data ? metricsPayload.data as Record<string, unknown> : null;
-  const deviceRecord = device as Record<string, unknown> | null;
-
-  return [
-=======
   const data = typeof metricsPayload?.data === "object" && metricsPayload?.data && !Array.isArray(metricsPayload.data)
     ? metricsPayload.data as Record<string, unknown>
     : null;
@@ -275,7 +261,6 @@ function getHistorySources(device: Device | null, metricsPayload: DeviceMetricsP
   return [
     // When the backend returns time-series history, it comes back as { data: [...] }
     Array.isArray(metricsPayload?.data) ? metricsPayload.data : undefined,
->>>>>>> 76839a183ddcb290d1364dbf5e19f053b1874839
     metricsPayload?.history,
     metricsPayload?.metricHistory,
     metricsPayload?.metricsHistory,
@@ -319,14 +304,6 @@ function coerceNumber(value: unknown): number | null {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
-<<<<<<< HEAD
-=======
-function getThresholdValue(definition: MetricDefinition): number | null {
-  const highMatch = definition.thresholds.high.match(/-?\d+(\.\d+)?/);
-  return highMatch ? coerceNumber(highMatch[0]) : null;
-}
-
->>>>>>> 76839a183ddcb290d1364dbf5e19f053b1874839
 function getSeriesColor(accent: MetricDefinition["accent"]): string {
   const colors = {
     rose: chartPalette.rose,
@@ -491,11 +468,6 @@ export function buildMetricTrend(device: Device | null, metricsPayload: DeviceMe
       current: latest,
       displayValue: current === null ? formatMetricValue(latest, metric.unit) : formatMetricValue(metric.value, metric.unit),
       unit: definition.unit,
-<<<<<<< HEAD
-=======
-      thresholdValue: getThresholdValue(definition),
-      thresholdLabel: definition.thresholds.high,
->>>>>>> 76839a183ddcb290d1364dbf5e19f053b1874839
     }];
   });
 

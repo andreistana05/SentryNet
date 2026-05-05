@@ -4,13 +4,8 @@ import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import AppShell from "../components/AppShell";
 import CustomSelect from "../components/CustomSelect";
-<<<<<<< HEAD
-import MetricTrendChart from "../components/MetricTrendChart";
-import { useDashboardOverview, useDeviceMetrics, useDevices } from "../hooks/useDashboardData";
-=======
 import MetricTrendChart, { type MetricTrendRange } from "../components/MetricTrendChart";
 import { useDashboardOverview, useDeviceMetrics, useDeviceMetricsHistory, useDevices } from "../hooks/useDashboardData";
->>>>>>> 76839a183ddcb290d1364dbf5e19f053b1874839
 import { buildDashboardStats } from "../lib/dashboard";
 import { buildMetricCards, buildMetricTrend } from "../lib/metrics";
 import type { Device, MetricCardViewModel } from "../types/domain";
@@ -162,13 +157,8 @@ function MetricsPage() {
   }, [metricsQuery.data, selectedDevice]);
 
   const metricTrend = useMemo(() => {
-<<<<<<< HEAD
-    return buildMetricTrend(selectedDevice, metricsQuery.data ?? null);
-  }, [metricsQuery.data, selectedDevice]);
-=======
     return buildMetricTrend(selectedDevice, historyQuery.data ?? null);
   }, [historyQuery.data, selectedDevice]);
->>>>>>> 76839a183ddcb290d1364dbf5e19f053b1874839
 
   const deviceOptions = useMemo(() => {
     if (!devices.length) {
@@ -233,11 +223,7 @@ function MetricsPage() {
         ))}
       </section>
 
-<<<<<<< HEAD
-      <MetricTrendChart data={metricTrend} loading={metricsQuery.isLoading} />
-=======
       <MetricTrendChart data={metricTrend} loading={historyQuery.isLoading} range={range} onRangeChange={setRange} />
->>>>>>> 76839a183ddcb290d1364dbf5e19f053b1874839
 
       {!selectedDevice && !devicesQuery.isLoading ? (
         <div className="table-state empty-state">
