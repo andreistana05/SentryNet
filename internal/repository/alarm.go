@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 	"sentrynet/backend/internal/models"
 )
 
@@ -377,85 +376,142 @@ func buildInPlaceholders(ids map[uuid.UUID]struct{}) (string, []any) {
 // ---- Problem Repository ----
 
 type problemRepository struct {
-	db *gorm.DB
+	db *sql.DB
 }
 
-func newProblemRepository(db *gorm.DB) ProblemRepository {
+func newProblemRepository(db *sql.DB) ProblemRepository {
 	return &problemRepository{db: db}
 }
 
 func (r *problemRepository) Create(problem *models.Problem) error {
-	return r.db.Create(problem).Error
+	if problem.ID == uuid.Nil {
+		problem.ID = uuid.New()
+	}
+	now := time.Now()
+	problem.SubmitDate, problem.LastModifiedDate = now, now
+	_, err := r.db.Exec(
+		`INSERT INTO problems (id, problem_number, alarm_name, incident_id, hyperlink, description, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person, occurrence_count)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+		problem.ID, problem.ProblemNumber, problem.AlarmName, problem.IncidentID, problem.Hyperlink, problem.Description, problem.Status, problem.SubmitDate, problem.LastModifiedDate, problem.CloseDate, problem.Priority, problem.AssignedGroup, problem.AssignedPerson, problem.OccurrenceCount,
+	)
+	return err
 }
 
 func (r *problemRepository) FindAll(filter ProblemFilter) ([]models.Problem, error) {
-	var problems []models.Problem
-	q := r.db.Preload("SourceIncident")
+	query := `SELECT id, problem_number, alarm_name, incident_id, hyperlink, description, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person, occurrence_count
+			  FROM problems WHERE TRUE`
+	args := []any{}
+	n := 1
 
 	if filter.Status != "" {
-		q = q.Where("status = ?", filter.Status)
+		query += fmt.Sprintf(" AND status = $%d", n); args = append(args, filter.Status); n++
 	}
 	if filter.Priority != "" {
-		q = q.Where("priority = ?", filter.Priority)
+		query += fmt.Sprintf(" AND priority = $%d", n); args = append(args, filter.Priority); n++
 	}
 	if filter.AlarmName != "" {
-		q = q.Where("alarm_name = ?", filter.AlarmName)
+		query += fmt.Sprintf(" AND alarm_name = $%d", n); args = append(args, filter.AlarmName); n++
 	}
 	if filter.Search != "" {
-		q = q.Where("problem_number ILIKE ?", "%"+filter.Search+"%")
+		query += fmt.Sprintf(" AND problem_number ILIKE $%d", n); args = append(args, "%"+filter.Search+"%"); n++
 	}
+	query += " ORDER BY submit_date DESC"
 	if filter.Limit > 0 {
-		q = q.Limit(filter.Limit)
+		query += fmt.Sprintf(" LIMIT $%d", n); args = append(args, filter.Limit); n++
 	}
 	if filter.Offset > 0 {
-		q = q.Offset(filter.Offset)
+		query += fmt.Sprintf(" OFFSET $%d", n); args = append(args, filter.Offset); n++
 	}
 
-	if err := q.Order("submit_date DESC").Find(&problems).Error; err != nil {
-		return nil, err
-	}
-	return problems, nil
-}
-
-func (r *problemRepository) FindByID(id uuid.UUID) (*models.Problem, error) {
-	var problem models.Problem
-	if err := r.db.Preload("SourceIncident").First(&problem, "id = ?", id).Error; err != nil {
-		return nil, err
-	}
-	return &problem, nil
-}
-
-func (r *problemRepository) FindByNumber(number string) (*models.Problem, error) {
-	var problem models.Problem
-	if err := r.db.Preload("SourceIncident").First(&problem, "problem_number = ?", number).Error; err != nil {
-		return nil, err
-	}
-	return &problem, nil
-}
-
-func (r *problemRepository) FindOpenByAlarmName(alarmName string) (*models.Problem, error) {
-	var problem models.Problem
-	err := r.db.Where("alarm_name = ? AND status != ?", alarmName, models.StatusClosed).
-		Order("submit_date DESC").
-		First(&problem).Error
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
-	return &problem, nil
+	defer rows.Close()
+	problems, err := scanProblems(rows)
+	if err != nil {
+		return nil, err
+	}
+	if err := r.preloadIncidents(problems); err != nil {
+		return nil, err
+	}
+	return problems, nil
+
+}
+
+func (r *problemRepository) FindByID(id uuid.UUID) (*models.Problem, error) {
+	prob, err := scanProblem(r.db.QueryRow(
+		`SELECT id, problem_number, alarm_name, incident_id, hyperlink, description, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person, occurrence_count
+		 FROM problems WHERE id = $1`, id,
+	))
+	if err == sql.ErrNoRows{
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if prob.IncidentID != nil {
+		inc, err := (&incidentRepository{r.db}).FindByID(*prob.IncidentID)
+		if err == nil {
+			prob.SourceIncident = inc
+		}
+	}
+	return prob, nil
+}
+
+func (r *problemRepository) FindByNumber(number string) (*models.Problem, error) {
+	prob, err := scanProblem(r.db.QueryRow(
+		`SELECT id, problem_number, alarm_name, incident_id, hyperlink, description, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person, occurrence_count
+		 FROM problems WHERE problem_number = $1`, number,
+	))
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if prob.IncidentID != nil {
+		inc, err := (&incidentRepository{r.db}).FindByID(*prob.IncidentID)
+		if err == nil {
+			prob.SourceIncident = inc
+		}
+	}
+	return prob, nil
+}
+
+func (r *problemRepository) FindOpenByAlarmName(alarmName string) (*models.Problem, error) {
+	prob, err := scanProblem(r.db.QueryRow(
+		`SELECT id, problem_number, alarm_name, incident_id, hyperlink, description, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person, occurrence_count
+		 FROM problems WHERE alarm_name = $1 AND status != $2`, alarmName, models.StatusClosed,
+	))
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	return prob, err
 }
 
 func (r *problemRepository) Update(problem *models.Problem) error {
-	return r.db.Save(problem).Error
+	problem.LastModifiedDate = time.Now()
+	_, err := r.db.Exec(
+		`UPDATE problems
+		SET problem_number = $1, alarm_name = $2, incident_id = $3, hyperlink = $4, description = $5, status = $6, last_modified_date = $7, close_date = $8, priority = $9, assigned_group = $10, assigned_person = $11, occurrence_count = $12
+		WHERE id = $13`,
+		problem.ProblemNumber, problem.AlarmName, problem.IncidentID, problem.Hyperlink, problem.Description,
+		problem.Status, problem.LastModifiedDate, problem.CloseDate,
+		problem.Priority, problem.AssignedGroup, problem.AssignedPerson, problem.OccurrenceCount, problem.ID,
+	)
+	return err	
 }
 
 func (r *problemRepository) Delete(id uuid.UUID) error {
-	return r.db.Delete(&models.Problem{}, "id = ?", id).Error
+	_, err := r.db.Exec(`DELETE FROM problems WHERE id = $1`, id)
+	return err
 }
 
 // NextProblemNumber generates the next sequential problem number (e.g. PRB0003).
 func (r *problemRepository) NextProblemNumber() (string, error) {
 	var count int64
-	if err := r.db.Model(&models.Problem{}).Count(&count).Error; err != nil {
+	if err := r.db.QueryRow(`SELECT COUNT(*) FROM problems`).Scan(&count); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("PRB%04d", count+1), nil
@@ -464,107 +520,331 @@ func (r *problemRepository) NextProblemNumber() (string, error) {
 // ---- Ticket Repository ----
 
 type ticketRepository struct {
-	db *gorm.DB
+	db *sql.DB
 }
 
-func newTicketRepository(db *gorm.DB) TicketRepository {
+func newTicketRepository(db *sql.DB) TicketRepository {
 	return &ticketRepository{db: db}
 }
 
 func (r *ticketRepository) Create(ticket *models.Ticket) error {
-	return r.db.Create(ticket).Error
+	if ticket.ID == uuid.Nil {
+		ticket.ID = uuid.New()
+	}
+	now := time.Now()
+	ticket.SubmitDate, ticket.LastModifiedDate = now, now
+	_, err := r.db.Exec(
+		`INSERT INTO tickets (id, ticket_number, incident_id, title, status, priority, assigned_group, assigned_person, submit_date, last_modified_date, close_date)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		 ticket.ID, ticket.TicketNumber, ticket.IncidentID, ticket.Title,
+		 ticket.Status, ticket.Priority, ticket.AssignedGroup, ticket.AssignedPerson,
+		 ticket.SubmitDate, ticket.LastModifiedDate, ticket.CloseDate,
+	)
+	return err	
 }
 
 func (r *ticketRepository) FindAll(filter TicketFilter) ([]models.Ticket, error) {
-	var tickets []models.Ticket
-	q := r.db.Model(&models.Ticket{}).
-		Preload("Updates", func(db *gorm.DB) *gorm.DB {
-			return db.Order("timestamp ASC")
-		})
+	query := `SELECT id, ticket_number, incident_id, title, status, priority, assigned_group, assigned_person, submit_date, last_modified_date, close_date
+			  FROM tickets WHERE TRUE`
+	args := []any{}
+	n := 1
 
 	if filter.IncidentID != nil {
-		q = q.Where("incident_id = ?", filter.IncidentID)
+		query += fmt.Sprintf(" AND incident_id = $%d", n); args = append(args, filter.IncidentID); n++
 	}
 	if filter.Status != "" {
-		q = q.Where("status = ?", filter.Status)
+		query += fmt.Sprintf(" AND status = $%d", n); args = append(args, filter.Status); n++
 	}
 	if filter.Priority != "" {
-		q = q.Where("priority = ?", filter.Priority)
+		query += fmt.Sprintf(" AND priority = $%d", n); args = append(args, filter.Priority); n++
 	}
 	if filter.Search != "" {
-		q = q.Where("ticket_number ILIKE ?", "%"+filter.Search+"%")
+		query += fmt.Sprintf(" AND ticket_number ILIKE $%d", n); args = append(args, "%"+filter.Search+"%"); n++
 	}
+	query +=" ORDER BY submit_date DESC"
 	if filter.Limit > 0 {
-		q = q.Limit(filter.Limit)
+		query += fmt.Sprintf(" LIMIT $%d", n); args = append(args, filter.Limit); n++
 	}
 	if filter.Offset > 0 {
-		q = q.Offset(filter.Offset)
+		query += fmt.Sprintf(" OFFSET $%d", n); args = append(args, filter.Offset); n++
 	}
 
-	if err := q.Order("submit_date DESC").Find(&tickets).Error; err != nil {
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	tickets, err := scanTickets(rows)
+	if err != nil {
+		return nil, err
+	}
+	if err := r.preloadIncidents(tickets); err != nil {
 		return nil, err
 	}
 	return tickets, nil
 }
 
 func (r *ticketRepository) FindByID(id uuid.UUID) (*models.Ticket, error) {
-	var ticket models.Ticket
-	err := r.db.Preload("Updates", func(db *gorm.DB) *gorm.DB {
-		return db.Order("timestamp ASC")
-	}).First(&ticket, "id = ?", id).Error
+	tick, err := scanTicket(r.db.QueryRow(
+		`SELECT id, ticket_number, incident_id, title, status, priority, assigned_group, assigned_person, submit_date, last_modified_date, close_date
+		 FROM tickets WHERE id = $1`, id,
+	))
+	if err == sql.ErrNoRows{
+		return nil, ErrNotFound
+	}
 	if err != nil {
 		return nil, err
 	}
-	return &ticket, nil
+	if tick.IncidentID != uuid.Nil {
+		inc, err := (&incidentRepository{r.db}).FindByID(tick.IncidentID)
+		if err == nil {
+			tick.SourceIncident = inc
+		}
+	}
+	return tick, nil
 }
 
 func (r *ticketRepository) FindByNumber(number string) (*models.Ticket, error) {
-	var ticket models.Ticket
-	err := r.db.Preload("Updates", func(db *gorm.DB) *gorm.DB {
-		return db.Order("timestamp ASC")
-	}).First(&ticket, "ticket_number = ?", number).Error
+	tick, err := scanTicket(r.db.QueryRow(
+		`SELECT id, ticket_number, incident_id, title, status, priority, assigned_group, assigned_person, submit_date, last_modified_date, close_date
+		 FROM tickets WHERE ticket_number = $1`, number,
+	))
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
 	if err != nil {
 		return nil, err
 	}
-	return &ticket, nil
+	if tick.IncidentID != uuid.Nil {
+		inc, err := (&incidentRepository{r.db}).FindByID(tick.IncidentID)
+		if err == nil {
+			tick.SourceIncident = inc
+		}
+	}
+	return tick, nil
 }
 
 func (r *ticketRepository) FindByIncidentID(incidentID uuid.UUID) (*models.Ticket, error) {
-	var ticket models.Ticket
-	err := r.db.Preload("Updates", func(db *gorm.DB) *gorm.DB {
-		return db.Order("timestamp ASC")
-	}).First(&ticket, "incident_id = ?", incidentID).Error
-	if err != nil {
-		return nil, err
+	tick, err := scanTicket(r.db.QueryRow(
+		`SELECT id, ticket_number, incident_id, title, status, priority, assigned_group, assigned_person, submit_date, last_modified_date, close_date
+		 FROM tickets WHERE incident_id = $1`, incidentID,
+	))
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
 	}
-	return &ticket, nil
+	return tick, err
 }
 
 func (r *ticketRepository) Update(ticket *models.Ticket) error {
-	return r.db.Save(ticket).Error
+	ticket.LastModifiedDate = time.Now()
+	_, err := r.db.Exec(
+		`UPDATE tickets
+		SET ticket_number = $1, incident_id = $2, title = $3, status = $4, priority = $5, assigned_group = $6, assigned_person = $7, last_modified_date = $8, close_date = $9
+		WHERE id = $10`,
+		ticket.TicketNumber, ticket.IncidentID, ticket.Title,
+		ticket.Status, ticket.Priority, ticket.AssignedGroup, ticket.AssignedPerson,
+		ticket.LastModifiedDate, ticket.CloseDate, ticket.ID,
+	)
+	return err
 }
 
 func (r *ticketRepository) AddUpdate(update *models.TicketUpdate) error {
-	return r.db.Create(update).Error
+	if update.ID == uuid.Nil {
+        update.ID = uuid.New()
+    }
+    if update.Timestamp.IsZero() {
+        update.Timestamp = time.Now()
+    }
+
+    _, err := r.db.Exec(
+        `INSERT INTO ticket_updates (id, ticket_id, event_type, description, timestamp)
+         VALUES ($1, $2, $3, $4, $5)`,
+        update.ID, update.TicketID, update.EventType, update.Description, update.Timestamp,
+    )
+    return err
 }
 
 // NextTicketNumber generates the next sequential ticket number (e.g. TKT0015).
 func (r *ticketRepository) NextTicketNumber() (string, error) {
 	var count int64
-	if err := r.db.Model(&models.Ticket{}).Count(&count).Error; err != nil {
+	if err := r.db.QueryRow(`SELECT COUNT(*) FROM tickets`).Scan(&count); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("TKT%04d", count+1), nil
 }
 
 func (r *ticketRepository) FindNotesByTicketID(ticketID uuid.UUID) ([]models.TicketNote, error) {
-	var notes []models.TicketNote
-	if err := r.db.Where("ticket_id = ?", ticketID).Order("created_at ASC").Find(&notes).Error; err != nil {
-		return nil, err
-	}
-	return notes, nil
+	rows, err := r.db.Query(
+        `SELECT id, ticket_id, body, author_name, created_at
+         FROM ticket_notes
+         WHERE ticket_id = $1
+         ORDER BY created_at ASC`,
+        ticketID,
+    )
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    return scanTicketNotes(rows)
 }
 
 func (r *ticketRepository) CreateNote(note *models.TicketNote) error {
-	return r.db.Create(note).Error
+	if note.ID == uuid.Nil {
+        note.ID = uuid.New()
+    }
+    if note.CreatedAt.IsZero() {
+        note.CreatedAt = time.Now()
+    }
+
+    _, err := r.db.Exec(
+        `INSERT INTO ticket_notes (id, ticket_id, body, author_name, created_at)
+         VALUES ($1, $2, $3, $4, $5)`,
+        note.ID, note.TicketID, note.Body, note.AuthorName, note.CreatedAt,
+    )
+    return err
+}
+
+// ---- Problem scan helpers ----
+
+func scanProblem(s scanner) (*models.Problem, error) {
+	p := &models.Problem{}
+	err := s.Scan(
+		&p.ID, &p.ProblemNumber, &p.AlarmName, &p.IncidentID, &p.Hyperlink, &p.Description,
+		&p.Status, &p.SubmitDate, &p.LastModifiedDate, &p.CloseDate,
+		&p.Priority, &p.AssignedGroup, &p.AssignedPerson, &p.OccurrenceCount,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+func scanProblems(rows *sql.Rows) ([]models.Problem, error) {
+	var problems []models.Problem
+	for rows.Next() {
+		p, err := scanProblem(rows)
+		if err != nil {
+			return nil, err
+		}
+		problems = append(problems, *p)
+	}
+	return problems, rows.Err()
+}
+
+func (r *problemRepository) preloadIncidents(problems []models.Problem) error {
+	idSet := map[uuid.UUID]struct{}{}
+	for _, p := range problems {
+		if p.IncidentID != nil {
+			idSet[*p.IncidentID] = struct{}{}
+		}
+	}
+	if len(idSet) == 0 {
+		return nil
+	}
+	ph, args := buildInPlaceholders(idSet)
+	rows, err := r.db.Query(
+		`SELECT id, incident_number, alarm_id, hyperlink, description, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person
+		 FROM incidents WHERE id IN (`+ph+`)`, args...,
+	)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	incMap := map[uuid.UUID]*models.Incident{}
+	for rows.Next() {
+		inc, err := scanIncident(rows)
+		if err != nil {
+			return err
+		}
+		incMap[inc.ID] = inc
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for i := range problems {
+		if problems[i].IncidentID != nil {
+			problems[i].SourceIncident = incMap[*problems[i].IncidentID]
+		}
+	}
+	return nil
+}
+
+// ---- Ticket scan helpers ----
+
+func scanTicket(s scanner) (*models.Ticket, error) {
+	t := &models.Ticket{}
+	err := s.Scan(
+		&t.ID, &t.TicketNumber, &t.IncidentID, &t.Title,
+		&t.Status, &t.Priority, &t.AssignedGroup, &t.AssignedPerson,
+		&t.SubmitDate, &t.LastModifiedDate, &t.CloseDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
+func scanTickets(rows *sql.Rows) ([]models.Ticket, error) {
+	var tickets []models.Ticket
+	for rows.Next() {
+		t, err := scanTicket(rows)
+		if err != nil {
+			return nil, err
+		}
+		tickets = append(tickets, *t)
+	}
+	return tickets, rows.Err()
+}
+
+func scanTicketNotes(rows *sql.Rows) ([]models.TicketNote, error) {
+	var notes []models.TicketNote
+	for rows.Next() {
+		n := models.TicketNote{}
+		if err := rows.Scan(&n.ID, &n.TicketID, &n.Body, &n.AuthorName, &n.CreatedAt); err != nil {
+			return nil, err
+		}
+		notes = append(notes, n)
+	}
+	return notes, rows.Err()
+}
+
+func (r *ticketRepository) preloadIncidents(tickets []models.Ticket) error {
+	idSet := map[uuid.UUID]struct{}{}
+	for _, t := range tickets {
+		if t.IncidentID != uuid.Nil {
+			idSet[t.IncidentID] = struct{}{}
+		}
+	}
+	if len(idSet) == 0 {
+		return nil
+	}
+	ph, args := buildInPlaceholders(idSet)
+	rows, err := r.db.Query(
+		`SELECT id, incident_number, alarm_id, hyperlink, description, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person
+		 FROM incidents WHERE id IN (`+ph+`)`, args...,
+	)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	incMap := map[uuid.UUID]*models.Incident{}
+	for rows.Next() {
+		inc, err := scanIncident(rows)
+		if err != nil {
+			return err
+		}
+		incMap[inc.ID] = inc
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for i := range tickets {
+		if tickets[i].IncidentID != uuid.Nil {
+			tickets[i].SourceIncident = incMap[tickets[i].IncidentID]
+		}
+	}
+	return nil
 }

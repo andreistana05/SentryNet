@@ -140,7 +140,7 @@ export interface MetricTrendSeries {
 export interface MetricTrendPoint {
   time: string;
   timestamp?: number;
-  [key: string]: string | number | undefined;
+  [key: string]: string | number;
 }
 
 export interface MetricTrendViewModel {

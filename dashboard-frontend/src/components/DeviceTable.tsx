@@ -17,7 +17,9 @@ interface DeviceTableProps {
 }
 
 function DeviceTable({ devices, loading, error, totalDevices, filteredCount }: DeviceTableProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
   const hasDevices = devices.length > 0;
+  const panelBodyId = "live-inventory-panel";
 
   return (
     <section className="table-container">
@@ -33,10 +35,28 @@ function DeviceTable({ devices, loading, error, totalDevices, filteredCount }: D
             <span>of {totalDevices} visible</span>
           </div>
 
+<<<<<<< HEAD
         </div>
       </div>
 
       <div className="collapsible-panel-body">
+=======
+          <button
+            className="panel-toggle"
+            type="button"
+            aria-controls={panelBodyId}
+            aria-expanded={isExpanded}
+            aria-label={isExpanded ? "Collapse Live Inventory" : "Expand Live Inventory"}
+            title={isExpanded ? "Collapse Live Inventory" : "Expand Live Inventory"}
+            onClick={() => setIsExpanded((current) => !current)}
+          >
+            <ChevronDown aria-hidden="true" className="panel-toggle-icon" size={18} />
+          </button>
+        </div>
+      </div>
+
+      <div id={panelBodyId} className="collapsible-panel-body" hidden={!isExpanded}>
+>>>>>>> 59f80ca (Make overview inventory and work queues collapsible)
         {error ? <div className="table-state error-state">{error}</div> : null}
 
         {loading ? (
@@ -73,6 +93,10 @@ function DeviceTable({ devices, loading, error, totalDevices, filteredCount }: D
                     <td>
                       <div className="device-name-cell">
                         <strong>{device.name}</strong>
+<<<<<<< HEAD
+=======
+                        <span>Telemetry active</span>
+>>>>>>> 59f80ca (Make overview inventory and work queues collapsible)
                       </div>
                     </td>
                     <td>{device.type}</td>

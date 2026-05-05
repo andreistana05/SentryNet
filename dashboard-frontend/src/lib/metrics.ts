@@ -9,7 +9,7 @@ export const thresholdProfiles: Record<string, MetricDefinition[]> = {
       label: "CPU Usage",
       unit: "%",
       accent: "rose",
-      aliases: ["cpu", "cpuusage", "cpu_usage", "cpuutilization", "cpu_utilization", "snmp_cpu", "snmpcpu"],
+      aliases: ["cpu", "cpuusage", "cpu_usage", "cpuutilization", "cpu_utilization"],
       thresholds: { low: ">=70% for 10min", medium: ">=85% for 5min", high: ">=95% for 2min" },
     },
     {
@@ -44,14 +44,6 @@ export const thresholdProfiles: Record<string, MetricDefinition[]> = {
       aliases: ["latency", "response_time", "ping", "round_trip_time"],
       thresholds: { low: ">=200ms for 5min", medium: ">=500ms for 3min", high: ">=1000ms for 1min" },
     },
-    {
-      key: "interfaceUtilization",
-      label: "Interface Traffic (in)",
-      unit: "GB",
-      accent: "cyan",
-      aliases: ["snmp_if_in_octets", "snmpifinoctets"],
-      thresholds: { low: ">=10 GB for 15min", medium: ">=50 GB for 5min", high: ">=100 GB for 2min" },
-    },
   ],
   router: [
     {
@@ -59,7 +51,7 @@ export const thresholdProfiles: Record<string, MetricDefinition[]> = {
       label: "Interface Utilization",
       unit: "%",
       accent: "cyan",
-      aliases: ["interface", "bandwidth", "throughput", "interfaceutilization", "interface_usage", "snmp_if_in_octets", "snmpifinoctets"],
+      aliases: ["interface", "bandwidth", "throughput", "interfaceutilization", "interface_usage"],
       thresholds: { low: ">=70% for 15min", medium: ">=85% for 5min", high: ">=95% for 2min" },
     },
     {
