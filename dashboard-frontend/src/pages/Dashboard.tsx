@@ -1,5 +1,4 @@
 import { startTransition, useDeferredValue, useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
 import AppShell from "../components/AppShell";
 import CustomSelect from "../components/CustomSelect";
 import DeviceTable from "../components/DeviceTable";
@@ -16,16 +15,7 @@ const EMPTY_TICKETS: Ticket[] = [];
 const EMPTY_PROBLEMS: Problem[] = [];
 
 function Dashboard() {
-<<<<<<< HEAD
   const [filters, setFilters] = useState({ status: "all", type: "all", query: "" });
-=======
-  const [filters, setFilters] = useState({
-    status: "all",
-    type: "all",
-    query: "",
-  });
-  const [isWorkQueuesExpanded, setIsWorkQueuesExpanded] = useState(true);
->>>>>>> 59f80ca (Make overview inventory and work queues collapsible)
   const [timeNow] = useState(() => Date.now());
 
   const overviewQuery = useDashboardOverview();
@@ -117,17 +107,7 @@ function Dashboard() {
   ].some(Boolean);
 
   const dataError =
-<<<<<<< HEAD
     overviewQuery.isError && devicesQuery.isError ? "We couldn't load the latest infrastructure snapshot." : "";
-=======
-    overviewQuery.isError && devicesQuery.isError
-      ? "We couldn't load the latest infrastructure snapshot."
-      : "";
-
-  const statusChartData = useMemo(() => buildStatusBreakdown(devices, stats), [devices, stats]);
-  const workloadChartData = useMemo(() => buildOperationsWorkload(stats), [stats]);
-  const workQueuesPanelId = "live-work-queues-panel";
->>>>>>> 59f80ca (Make overview inventory and work queues collapsible)
 
   function updateFilter(key: "status" | "type" | "query", value: string) {
     startTransition(() => {
@@ -163,111 +143,6 @@ function Dashboard() {
               loading={isLoading}
               to={metric.to}
             />
-<<<<<<< HEAD
-=======
-          </label>
-
-          <label className="filter-group">
-            <span>Status</span>
-            <CustomSelect
-              value={filters.status}
-              options={statusOptions}
-              onChange={(value) => updateFilter("status", value)}
-              ariaLabel="Filter devices by status"
-            />
-          </label>
-
-          <label className="filter-group">
-            <span>Type</span>
-            <CustomSelect
-              value={filters.type}
-              options={typeOptions}
-              onChange={(value) => updateFilter("type", value)}
-              ariaLabel="Filter devices by type"
-            />
-          </label>
-        </div>
-      </section>
-
-      <DeviceTable
-        devices={tableDevices}
-        loading={isLoading}
-        error={dataError}
-        totalDevices={stats.totalDevices}
-        filteredCount={stats.filtered}
-      />
-
-      <section className="chart-grid">
-        <FleetStatusChart data={statusChartData} loading={isLoading} />
-        <OperationsWorkloadChart data={workloadChartData} loading={isLoading} />
-      </section>
-
-      <section className="table-container">
-        <div className="table-header">
-          <div>
-            <span className="eyebrow">Live Work Queues</span>
-            <h3>Cross-links between alarms, incidents, tickets, and problems</h3>
-          </div>
-
-          <button
-            className="panel-toggle"
-            type="button"
-            aria-controls={workQueuesPanelId}
-            aria-expanded={isWorkQueuesExpanded}
-            aria-label={isWorkQueuesExpanded ? "Collapse Live Work Queues" : "Expand Live Work Queues"}
-            title={isWorkQueuesExpanded ? "Collapse Live Work Queues" : "Expand Live Work Queues"}
-            onClick={() => setIsWorkQueuesExpanded((current) => !current)}
-          >
-            <ChevronDown aria-hidden="true" className="panel-toggle-icon" size={18} />
-          </button>
-        </div>
-
-        <div id={workQueuesPanelId} className="queue-grid collapsible-panel-body" hidden={!isWorkQueuesExpanded}>
-          {(
-            [
-              { key: "alarms", items: alarms },
-              { key: "incidents", items: incidents },
-              { key: "tickets", items: tickets },
-              { key: "problems", items: problems },
-            ] as const
-          ).map(({ key: group, items }) => (
-            <div key={group} className="queue-column">
-              <h4>{group}</h4>
-              {items.slice(0, 3).map((item, index) => {
-                const raw = item as Record<string, unknown>;
-                const displayId =
-                  raw.alarm_number ??
-                  raw.incident_number ??
-                  raw.ticket_number ??
-                  raw.problem_number ??
-                  item.id ??
-                  "Unlinked";
-                const displayTitle =
-                  (raw.alarm as string | undefined) ??
-                  (raw.description as string | undefined) ??
-                  (raw.alarm_name as string | undefined) ??
-                  item.title ??
-                  item.name ??
-                  "Untitled record";
-                return (
-                  <div key={item.id ?? `${group}-${index}`} className="queue-card">
-                    <div className="queue-card-top">
-                      <strong>{String(displayId)}</strong>
-                      <span className={`status-badge ${statusClassName(item.status)}`}>
-                        {String(item.status ?? "unknown")}
-                      </span>
-                    </div>
-                    <p>{String(displayTitle)}</p>
-                  </div>
-                );
-              })}
-              {items.length ? null : (
-                <div className="queue-card">
-                  <p>No {group} are currently available.</p>
-                </div>
-              )}
-            </div>
->>>>>>> 59f80ca (Make overview inventory and work queues collapsible)
           ))}
         </div>
       </section>
