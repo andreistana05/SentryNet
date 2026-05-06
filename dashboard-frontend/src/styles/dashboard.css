@@ -235,6 +235,38 @@
   box-shadow: 0 0 14px currentColor;
 }
 
+.sidebar-nav .sidebar-link:nth-child(1) .sidebar-link-dot {
+  background: var(--cyan);
+  box-shadow: 0 0 14px var(--cyan)
+}
+
+.sidebar-nav .sidebar-link:nth-child(2) .sidebar-link-dot {
+  background: var(--green);
+  box-shadow: 0 0 14px var(--green)
+}
+
+.sidebar-nav .sidebar-link:nth-child(3) .sidebar-link-dot {
+  background: var(--rose);
+  box-shadow: 0 0 14px var(--rose)
+}
+
+.sidebar-nav .sidebar-link:nth-child(4) .sidebar-link-dot {
+  background: var(--amber);
+  box-shadow: 0 0 14px var(--amber)
+}
+
+.sidebar-nav .sidebar-link:nth-child(5) .sidebar-link-dot {
+  background: #a78bfa;
+  box-shadow: 0 0 14px #a78bfa;
+}
+
+.sidebar-nav .sidebar-link:nth-child(6) .sidebar-link-dot {
+  background: #f97316;
+  box-shadow: 0 0 14px #f97316;
+}
+
+
+
 .sidebar-summary {
   margin-top: auto;
   padding: 0.75rem;
@@ -287,6 +319,8 @@
 }
 
 .header {
+  position: relative;
+  z-index: 10;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -297,6 +331,65 @@
   border-radius: var(--radius-lg);
   backdrop-filter: blur(18px);
   box-shadow: var(--shadow-xl);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.header-separator {
+  width: 1px;
+  height: 2rem;
+  background: var(--line-soft);
+  flex-shrink: 0;
+}
+
+.header-page-slot { 
+  min-width: 0;
+}
+
+.header-metrics-slot {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.header-metrics-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.device-status-badge {
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  border: 1px solid var(--line-soft);
+  background: rgba(148, 163, 184, 0.08);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.device-status-badge.status-online {
+  color: var(--green);
+  background: rgba(74, 222, 128, 0.1);
+  border-color: rgba(74, 222, 128, 0.25);
+}
+
+.device-status-badge.status-offline {
+  color: var(--rose);
+  background: rgba(251, 113, 133, 0.1);
+  border-color: rgba(251, 113, 133, 0.25);
+}
+
+.device-status-badge.status-warning {
+  color: var(--amber);
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.25);
 }
 
 .header h1 {
@@ -453,7 +546,7 @@
 
 .summary-metric {
   min-width: 0;
-  padding: 0.85rem 1rem;
+  padding: 0.65rem 0.5rem;
   background: rgba(148, 163, 184, 0.06);
   border: 1px solid rgba(148, 163, 184, 0.12);
   border-radius: var(--radius-md);
@@ -467,7 +560,7 @@
 .summary-metric span {
   display: block;
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: 0.72rem;
 }
 
 .summary-metric strong {
@@ -475,7 +568,7 @@
   margin-top: 0.25rem;
   color: var(--text-primary);
   font-family: "Space Grotesk", sans-serif;
-  font-size: clamp(1.15rem, 2vw, 1.6rem);
+  font-size: clamp(0.9rem, 2vw, 1.15rem);
   line-height: 1.1;
 }
 
@@ -674,14 +767,15 @@
 }
 
 .col {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
   gap: 0.5rem;
   min-height: 0;
   overflow: hidden;
 }
 
 .col-right {
+  grid-template-rows: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
 }
 
@@ -803,7 +897,7 @@
 .metric-trend-panel {
   --chart-threshold: rgba(251, 113, 133, 0.72);
   --chart-threshold-text: var(--rose);
-  min-height: 0px;
+  min-height: 0;
 }
 
 .metric-trend-layout {
@@ -814,7 +908,7 @@
 }
 
 .metric-trend-canvas {
-  min-height: 0px;
+  min-height: 0;
 }
 
 .metric-trend-actions {
@@ -897,7 +991,7 @@
 
 .chart-legend {
   display: grid;
-  gap: 0.8rem;
+  gap: 0.4rem;
   position: relative;
   z-index: 1;
 }
@@ -906,8 +1000,8 @@
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.85rem 1rem;
+  gap: 0.5rem;
+  padding: 0.4rem 0.7rem;
   background: rgba(148, 163, 184, 0.05);
   border: 1px solid rgba(148, 163, 184, 0.12);
   border-radius: 1rem;
@@ -1281,10 +1375,17 @@ a.metric-card:focus-visible {
 }
 
 .col .table-container {
-  flex: 1;
   min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.col-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -2311,7 +2412,8 @@ a.metric-card:focus-visible {
   }
 
   .col-right {
-    grid-template-rows: none;
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
   }
 
   .panel {

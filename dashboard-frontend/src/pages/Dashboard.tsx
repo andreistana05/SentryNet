@@ -3,6 +3,9 @@ import AppShell from "../components/AppShell";
 import CustomSelect from "../components/CustomSelect";
 import DeviceTable from "../components/DeviceTable";
 import MetricCard from "../components/MetricCard";
+import FleetStatusChart from "../components/FleetStatusChart";
+import OperationsWorkloadChart from "../components/OperationsWorkloadChart";
+import { buildOperationsWorkload, buildStatusBreakdown } from "../lib/charts";
 import { useDashboardOverview, useDevices, useOperations } from "../hooks/useDashboardData";
 import { buildDashboardStats } from "../lib/dashboard";
 import { formatLastSeen, statusClassName } from "../lib/formatters";
@@ -89,6 +92,9 @@ function Dashboard() {
       }),
     [alarms, devices, filteredDevices.length, incidents, overviewQuery.data, problems, tickets],
   );
+
+  const fleetStatus = useMemo(() => buildStatusBreakdown(devices, stats), [devices, stats]);
+  const operationsWorkload = useMemo(() => buildOperationsWorkload(stats), [stats]);
 
   const metricCards = [
     { title: "Open Alarms", value: stats.activeAlerts, accent: "rose" as const, to: "/dashboard/alarms" },
@@ -194,9 +200,12 @@ function Dashboard() {
             totalDevices={stats.totalDevices}
             filteredCount={stats.filtered}
           />
+          <div className="col-charts">
+            <FleetStatusChart data={fleetStatus} loading={isLoading} />
+            <OperationsWorkloadChart data ={operationsWorkload} loading={isLoading} />
+          </div>
         </div>
 
-        {/* Right: queue panels */}
         <div className="col col-right">
           {queueGroups.map(({ key, label, items }) => (
             <section key={key} className="panel">
@@ -207,7 +216,7 @@ function Dashboard() {
                 <span className="meta">{items.length} active</span>
               </div>
               <div className="panel-queue">
-                {items.slice(0, 5).map((item, index) => {
+                {items.map((item, index) => {
                   const raw = item as Record<string, unknown>;
                   const displayId =
                     raw.alarm_number ?? raw.incident_number ?? raw.ticket_number ?? item.id ?? "—";

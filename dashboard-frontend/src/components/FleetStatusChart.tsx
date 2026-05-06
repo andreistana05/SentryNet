@@ -22,6 +22,15 @@ function FleetStatusChart({ data, loading }: FleetStatusChartProps) {
 
       {!loading && data.length > 0 ? (
         <div className="chart-shell">
+          <div className="chart-legend">
+            {data.map((entry) => (
+              <div key={entry.name} className="chart-legend-row">
+                <span className="chart-legend-swatch" style={{ backgroundColor: entry.color }} />
+                <span>{entry.name}</span>
+                <strong>{entry.value}</strong>
+              </div>
+            ))}
+          </div>
           <div className="chart-canvas">
             <ResponsiveContainer width="100%" height={160}>
               <PieChart>
@@ -45,15 +54,6 @@ function FleetStatusChart({ data, loading }: FleetStatusChartProps) {
             </ResponsiveContainer>
           </div>
 
-          <div className="chart-legend">
-            {data.map((entry) => (
-              <div key={entry.name} className="chart-legend-row">
-                <span className="chart-legend-swatch" style={{ backgroundColor: entry.color }} />
-                <span>{entry.name}</span>
-                <strong>{entry.value}</strong>
-              </div>
-            ))}
-          </div>
         </div>
       ) : null}
     </section>

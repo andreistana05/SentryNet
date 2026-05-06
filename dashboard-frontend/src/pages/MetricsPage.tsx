@@ -171,65 +171,56 @@ function MetricsPage() {
     }));
   }, [devices]);
 
-  return (
-    <AppShell stats={stats}>
-      <section className="page-summary metrics-page-summary">
-        <div className="page-summary-copy">
-          <span className="eyebrow">Device Metrics</span>
-          <h2>Telemetry profile</h2>
-          {devicesQuery.isError ? (
-            <div className="table-state error-state">We couldn't load devices for the metrics view.</div>
-          ) : null}
-        </div>
+  const headerSlot = (
+    <div className="header-metrics-slot">
+      <span className="eyebrow">Device Metrics</span>
+      <div className="header-metrics-controls">
+        <CustomSelect
+          value={selectedDevice ? String(selectedDevice.id) : ""}
+          options={deviceOptions}
+          onChange={(value) => setSearchParams({device : value })}
+          disabled={!devices.length}
+          ariaLabel="Select device for metrics"
+        />
+        {selectedDevice ? (
+          <span className={`device-status-badge status-${selectedDevice.status}`}>
+            {selectedDevice.status}
+          </span>
+        ) : null}
+      </div>
+      {devicesQuery.isError ? (
+        <div className="table-state error-state">Couldn't load devices.</div> ) : null }
+    </div>
+  );
 
-        <div className="summary-metrics metrics-summary-metrics">
-          <div className="summary-metric metrics-asset-selector">
-            <span>Selected Asset</span>
-            <CustomSelect
-              value={selectedDevice ? String(selectedDevice.id) : ""}
-              options={deviceOptions}
-              onChange={(value) => setSearchParams({ device: value })}
-              disabled={!devices.length}
-              ariaLabel="Select device for metrics"
-            />
-          </div>
-          <div className="summary-metric">
-            <span>Device Status</span>
-            <strong>{selectedDevice?.status ?? "Unknown"}</strong>
-            <small>{selectedDevice?.ipAddress ?? "IP unavailable"}</small>
-          </div>
-        </div>
-      </section>
-      <div className ="metrics-body">
+  return (
+    <AppShell stats={stats} headerSlot={headerSlot}>
       <section className="metrics-grid">
         {metricCards.map((metric, index) => (
           <article
             key={metric.key}
             className={`metric-card accent-${metric.accent} ${devicesQuery.isLoading ? "is-loading" : ""}`}
-            style={{ animationDelay: `${index * 90}ms` }}
-          >
-            <div className="metric-card-top">
-              <span>{metric.label}</span>
-              <div className="metric-card-actions">
-                <ThresholdPopover metric={metric} />
-                <div className="metric-orb" />
+            style={{ animationDelay: `${index * 90}ms`}}
+            >
+              <div className="metric-card-top">
+                <span>{metric.label}</span>
+                <div className="metric-card-actions">
+                  <ThresholdPopover metric={metric}></ThresholdPopover>
+                  <div className="metric-orb" />
+                </div>
               </div>
-            </div>
-
-            <strong>{devicesQuery.isLoading ? "--" : metric.displayValue}</strong>
-            <span className="metric-footnote">Last update: {metric.lastUpdated}</span>
-          </article>
+              <strong>{devicesQuery.isLoading ? "--" : metric.displayValue}</strong>
+              <span className="metric-footnote">Last update: {metric.lastUpdated}</span>
+            </article>
         ))}
       </section>
-
       <MetricTrendChart data={metricTrend} loading={historyQuery.isLoading} range={range} onRangeChange={setRange} />
-      </div>
+
       {!selectedDevice && !devicesQuery.isLoading ? (
         <div className="table-state empty-state">
-          No device is available yet. Once inventory loads, this page will attach the correct
-          metric profile automatically.
+          No device available yet. Inventory will attach the correct metric profile automatically.
         </div>
-      ) : null}
+      ) : null }
     </AppShell>
   );
 }

@@ -1,13 +1,14 @@
-import { useState, type PropsWithChildren } from "react";
+import { useState, type PropsWithChildren, type ReactNode } from "react";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 import type { DashboardStats } from "../types/domain";
 
 interface AppShellProps extends PropsWithChildren {
   stats: DashboardStats;
+  headerSlot?: ReactNode;
 }
 
-function AppShell({ children, stats }: AppShellProps) {
+function AppShell({ children, stats, headerSlot }: AppShellProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
   return (
@@ -23,7 +24,7 @@ function AppShell({ children, stats }: AppShellProps) {
       />
 
       <div className="main-content">
-        <Header />
+        <Header slot ={headerSlot} />
         <main className="dashboard-shell">{children}</main>
       </div>
     </div>

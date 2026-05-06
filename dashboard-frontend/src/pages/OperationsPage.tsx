@@ -423,16 +423,8 @@ function OperationsPage({ type }: { type: OperationType }) {
   };
 
   return (
-    <AppShell stats={stats}>
+    <AppShell stats={stats} headerSlot = {<span className="eyebrow">{config.eyebrow}</span>}>
       <section className="page-summary">
-        <div className="page-summary-copy">
-          <span className="eyebrow">{config.eyebrow}</span>
-          <h2>{`${config.eyebrow} records`}</h2>
-          {itemsQuery.isError ? (
-            <div className="table-state error-state">{`We couldn't load ${type} from the backend.`}</div>
-          ) : null}
-        </div>
-
         <div className="summary-metrics">
           <div className="summary-metric">
             <span>Queue Size</span>
@@ -443,6 +435,9 @@ function OperationsPage({ type }: { type: OperationType }) {
             <strong>{config.summaryLabel}</strong>
           </div>
         </div>
+        {itemsQuery.isError ? (
+          <div className="table-state error-state">{`We couldn't load ${type} from the backend.`}</div>
+        ) : null }
       </section>
 
       <OperationsTable
