@@ -125,7 +125,7 @@ function MetricTrendChart({ data, loading, range, onRangeChange }: MetricTrendCh
       {!loading && data.series.length > 0 && selectedSeries ? (
         <div className="metric-trend-layout">
           <div className="chart-canvas metric-trend-canvas">
-            <ResponsiveContainer width="100%" height={340}>
+            <ResponsiveContainer width="100%" height="100%">
               <LineChart data={visiblePoints} margin={{ top: 12, right: 16, left: -18, bottom: 0 }}>
                 <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
                 <XAxis

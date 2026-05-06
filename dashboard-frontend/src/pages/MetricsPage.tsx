@@ -186,7 +186,7 @@ function MetricsPage() {
           <div className="summary-metric metrics-asset-selector">
             <span>Selected Asset</span>
             <CustomSelect
-              value={selectedDevice?.id ?? ""}
+              value={selectedDevice ? String(selectedDevice.id) : ""}
               options={deviceOptions}
               onChange={(value) => setSearchParams({ device: value })}
               disabled={!devices.length}
@@ -200,7 +200,7 @@ function MetricsPage() {
           </div>
         </div>
       </section>
-
+      <div className ="metrics-body">
       <section className="metrics-grid">
         {metricCards.map((metric, index) => (
           <article
@@ -217,14 +217,13 @@ function MetricsPage() {
             </div>
 
             <strong>{devicesQuery.isLoading ? "--" : metric.displayValue}</strong>
-            <p>High threshold: {metric.thresholds.high}</p>
             <span className="metric-footnote">Last update: {metric.lastUpdated}</span>
           </article>
         ))}
       </section>
 
       <MetricTrendChart data={metricTrend} loading={historyQuery.isLoading} range={range} onRangeChange={setRange} />
-
+      </div>
       {!selectedDevice && !devicesQuery.isLoading ? (
         <div className="table-state empty-state">
           No device is available yet. Once inventory loads, this page will attach the correct

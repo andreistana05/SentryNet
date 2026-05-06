@@ -32,7 +32,9 @@
       "PowerShell(net stop winnat)",
       "PowerShell(net start winnat)",
       "PowerShell(netsh interface ipv4 show dynamicport tcp)",
-      "Bash(Select-String -Pattern \"postgres|pq|pgx\" go.mod)"
+      "Bash(Select-String -Pattern \"postgres|pq|pgx\" go.mod)",
+      "Bash(find \"f:\\\\\\\\facultate\\\\\\\\SentryNet\\\\\\\\SentryNet app\" -type f \\\\\\( -name \"docker-compose*\" -o -name \".env*\" -o -name \"main.go\" -o -name \"nginx.conf\" -o -name \"Dockerfile*\" -o -name \"*config*\" \\\\\\))",
+      "Bash(find \"f:\\\\\\\\facultate\\\\\\\\SentryNet\\\\\\\\SentryNet app\" -name \"config.go\" -type f)"
     ]
   }
 }
