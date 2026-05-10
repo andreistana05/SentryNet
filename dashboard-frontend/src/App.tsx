@@ -5,7 +5,23 @@ import Login from "./pages/Login";
 import MetricsPage from "./pages/MetricsPage";
 import OperationsPage from "./pages/OperationsPage";
 import Register from "./pages/Register";
-import "./styles/dashboard.css";
+import "./styles/global.css";
+import "./styles/layout.css";
+import "./styles/components/sidebar.css";
+import "./styles/components/header.css";
+import "./styles/components/theme-toggle.css";
+import "./styles/components/metric-card.css";
+import "./styles/components/custom-select.css";
+import "./styles/components/device-table.css";
+import "./styles/components/operations-table.css";
+import "./styles/components/fleet-status-chart.css";
+import "./styles/components/operations-workload-chart.css";
+import "./styles/components/metric-trend-chart.css";
+import "./styles/pages/dashboard.css";
+import "./styles/pages/metrics.css";
+import "./styles/pages/operations.css";
+import "./styles/pages/login.css";
+
 
 function App() {
   return (

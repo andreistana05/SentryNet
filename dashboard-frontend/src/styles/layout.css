@@ -1,0 +1,184 @@
+.layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  height: 100vh;
+  overflow: hidden;
+  transition: grid-template-columns 220ms ease;
+}
+
+.layout.sidebar-collapsed {
+  grid-template-columns: 64px 1fr;
+}
+
+.sidebar-shell {
+  display: contents;
+}
+
+/* ── Collapsed sidebar (64px) ── */
+.layout.sidebar-collapsed .sidebar-scroll {
+  padding: 0.75rem 0.5rem;
+  align-items: center;
+}
+
+.layout.sidebar-collapsed .sidebar-header {
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  align-items: center;
+}
+
+.layout.sidebar-collapsed .brand-block {
+  flex: none;
+  justify-content: center;
+}
+
+.layout.sidebar-collapsed .sidebar-nav {
+  width: 100%;
+}
+
+.layout.sidebar-collapsed .sidebar-link {
+  justify-content: center;
+  padding: 0.45rem;
+}
+
+.layout.sidebar-collapsed .sidebar-summary {
+  display: none;
+}
+
+.layout.sidebar-collapsed .sidebar-link-dot {
+  margin: 0;
+}
+
+.main-content {
+  min-width: 0;
+  height: 100vh;
+  padding: 0.75rem 0.9rem;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 0.65rem;
+  overflow: hidden;
+}
+
+.dashboard-shell {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 0.65rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lower {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  gap: 0.65rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.col {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.5rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.col-right {
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.col-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.col .table-container .collapsible-panel-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 720px) {
+    .layout {
+    height: auto;
+    min-height: 100vh;
+    grid-template-columns: 64px 1fr;
+  }
+
+  .main-content {
+    height: auto;
+    overflow: visible;
+  }
+
+  .dashboard-shell {
+    grid-template-rows: auto auto;
+    overflow: visible;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .lower {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .col-right {
+    grid-template-columns: none;
+  }
+
+  .panel {
+    min-height: 180px;
+  }
+}
+
+@media (max-width: 1080px) {
+    .layout {
+    height: auto;
+    min-height: 100vh;
+    grid-template-columns: 64px 1fr;
+  }
+
+  .main-content {
+    height: auto;
+    overflow: visible;
+  }
+
+  .dashboard-shell {
+    grid-template-rows: auto auto;
+    overflow: visible;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .lower {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .col-right {
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .panel {
+    min-height: 180px;
+  }
+}

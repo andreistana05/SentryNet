@@ -1,0 +1,208 @@
+.ticket-notes-toggle.is-active {
+  color: var(--text-primary);
+  background: rgba(103, 232, 249, 0.18);
+  border-color: rgba(103, 232, 249, 0.3);
+}
+
+.ticket-status-editor {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 172px;
+  position: relative;
+}
+
+.ticket-status-trigger {
+  width: 100%;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding-right: 0.95rem;
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+}
+
+.ticket-status-trigger:hover,
+.ticket-status-trigger:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.12);
+  outline: none;
+}
+
+.ticket-status-trigger:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.ticket-status-chevron {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-1px);
+  transition: transform 180ms ease;
+  flex: 0 0 auto;
+}
+
+.ticket-status-chevron.is-open {
+  transform: rotate(-135deg) translateY(-1px);
+}
+
+.ticket-status-menu {
+  position: fixed;
+  z-index: 120;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.4rem;
+  background: var(--dropdown-bg);
+  border: 1px solid var(--dropdown-border);
+  border-radius: 1rem;
+  box-shadow: var(--dropdown-shadow);
+  backdrop-filter: blur(18px);
+  transform-origin: bottom center;
+  max-height: 11rem;
+  overflow-y: auto;
+}
+
+.ticket-status-option {
+  width: 100%;
+  padding: 0.72rem 0.85rem;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: 0.8rem;
+  text-align: left;
+  text-transform: capitalize;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.ticket-status-option:hover,
+.ticket-status-option:focus-visible,
+.ticket-status-option.is-selected {
+  color: var(--text-primary);
+  background: var(--dropdown-option-selected);
+  outline: none;
+}
+
+.ticket-notes-composer,
+.ticket-note-composer {
+  position: relative;
+}
+
+.ticket-note-composer {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.ticket-note-history {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.ticket-note-list {
+  display: grid;
+  gap: 0.65rem;
+  max-height: 10rem;
+  overflow-y: auto;
+  padding-right: 0.15rem;
+}
+
+.ticket-note-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.8rem 0.9rem;
+  background: rgba(148, 163, 184, 0.06);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 0.95rem;
+}
+
+.ticket-note-card p {
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.ticket-note-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ticket-note-meta strong {
+  font-size: 0.9rem;
+}
+
+.ticket-note-meta span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.ticket-note-composer label {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.ticket-note-composer label span {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.ticket-note-composer textarea {
+  width: 100%;
+  min-height: 9rem;
+  resize: vertical;
+  padding: 1rem;
+  color: var(--text-primary);
+  background: var(--field-bg);
+  border: 1px solid var(--field-border);
+  border-radius: 1rem;
+  outline: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.ticket-note-composer textarea:focus {
+  border-color: rgba(103, 232, 249, 0.35);
+  box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.12);
+}
+
+.ticket-note-composer textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.ticket-note-submit {
+  justify-self: end;
+}
+
+.ticket-note-popup {
+  position: fixed;
+  z-index: 130;
+  padding: 1rem;
+  background: var(--dropdown-bg);
+  border: 1px solid var(--dropdown-border);
+  border-radius: 1.2rem;
+  box-shadow: var(--dropdown-shadow);
+  backdrop-filter: blur(18px);
+  transform-origin: bottom right;
+}
+
+.ticket-note-popup-header {
+  margin-bottom: 0.85rem;
+}
+
+.ticket-note-popup-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.ticket-note-popup-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ticket-note-cancel {
+  margin-top: 0;
+}
