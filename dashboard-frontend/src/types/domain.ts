@@ -192,3 +192,8 @@ export interface LoginPayload {
   email: string;
   password: string;
 }
+
+export interface AlarmTrendDatum {
+  date: string;
+  count: number;
+}

@@ -64,6 +64,11 @@
   line-height: 1.1;
 }
 
+.summary-metric-wide strong {
+  font-size: clamp(0.78rem, 1.4vw, 0.92rem);
+  line-height: 1.3;
+}
+
 .summary-metric small {
   display: block;
   margin-top: 0.7rem;
@@ -104,4 +109,20 @@
   .summary-metric-wide {
     grid-column: auto;
   }
+}
+
+.ops-body {
+  display: grid;
+  grid-template-columns: 1fr minmax(220px, 300px);
+  gap:0.65rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ops-charts {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 0.65rem;
+  min-height: 0;
+  overflow: hidden;
 }

@@ -1,6 +1,8 @@
 import type {
+  AlarmTrendDatum,
   DashboardStats,
   Device,
+  OperationRecord,
   OperationsWorkloadDatum,
   StatusBreakdownDatum,
 } from "../types/domain";
@@ -47,4 +49,38 @@ export function formatChartValue(value: number): [string, string] {
   const safeValue = Number.isFinite(value) ? value : 0;
   const suffix = safeValue === 1 ? "item" : "items";
   return [`${safeValue} ${suffix}`, "Count"];
+}
+
+export function buildAlarmPriority(alarms: OperationRecord[]): StatusBreakdownDatum[] {
+  const counts = alarms.reduce<Record<string, number>>((acc, alarm) => {
+    const key = String(alarm.priority || "unknown").toLowerCase();
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  return [
+    { name: "Critical", value: counts.critical ?? 0, color: chartPalette.rose},
+    { name: "High", value: counts.high ?? 0, color: chartPalette.amber},
+    { name: "Medium", value: counts.medium ?? 0, color: chartPalette.cyan},
+    { name: "Low", value: counts.low ?? 0, color: chartPalette.green},
+    { name: "Unknown", value: counts.unknown ?? 0, color: chartPalette.muted }
+  ].filter((item) => item.value > 0);
+}
+
+export function buildAlarmTrend(alarms: OperationRecord[]): AlarmTrendDatum[] {
+  const counts = alarms.reduce<Record<string, number>>((acc, alarm) => {
+    const raw = alarm.submit_date ?? alarm.created_at ?? "";
+    const parsed = new Date(String(raw));
+    if (Number.isNaN(parsed.getTime())) return acc;
+    const day = parsed.toISOString().slice(0, 10);
+    acc[day] = (acc[day] || 0) + 1;
+    return acc
+  }, {});
+
+  return Object.entries(counts)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, count]) => ({
+      date: new Date(date).toLocaleDateString("en-US", {month: "short", day: "numeric"}),
+      count,
+    }));
 }

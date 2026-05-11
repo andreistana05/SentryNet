@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import AppShell from "../components/AppShell";
 import OperationsTable, { type OperationsTableColumn } from "../components/OperationsTable";
@@ -15,6 +15,9 @@ import { buildDashboardStats } from "../lib/dashboard";
 import { formatTimestamp, statusClassName } from "../lib/formatters";
 import { TICKET_STATUS_OPTIONS } from "../services/dashboardService";
 import type { Alarm, Device, Incident, OperationType, Problem, Ticket, TicketNote, TicketStatus } from "../types/domain";
+import AlarmPriorityChart from "../components/AlarmPriorityChart";
+import AlarmTrendChart from "../components/AlarmTrendChart";
+import { buildAlarmPriority, buildAlarmTrend } from "../lib/charts";
 
 const EMPTY_DEVICES: Device[] = [];
 
@@ -345,6 +348,14 @@ function OperationsPage({ type }: { type: OperationType }) {
   const updateTicketStatusMutation = useUpdateTicketStatusMutation();
   const devices = devicesQuery.data ?? EMPTY_DEVICES;
   const items = itemsQuery.data ?? [];
+  const alarmPriority = useMemo(
+    () => (type === "alarms" ? buildAlarmPriority(items) : []),
+    [type, items],
+  );
+  const alarmTrend = useMemo(
+    () => (type === "alarms" ? buildAlarmTrend(items) : []),
+    [type, items],
+  );
   const config = pageCopy[type];
   const pendingTicketId = updateTicketStatusMutation.variables?.ticketId;
   const [openNotesTicketId, setOpenNotesTicketId] = useState<string | number | null>(null);
@@ -440,13 +451,21 @@ function OperationsPage({ type }: { type: OperationType }) {
         ) : null }
       </section>
 
-      <OperationsTable
-        eyebrow={config.eyebrow}
-        title={`${config.eyebrow} records`}
-        items={items}
-        columns={columns[type]}
-        emptyMessage={`No ${type} are available right now.`}
-      />
+      <div className="ops-body">
+        <OperationsTable
+          eyebrow={config.eyebrow}
+          title={`${config.eyebrow} records`}
+          items={items}
+          columns={columns[type]}
+          emptyMessage={`No ${type} are available right now.`}
+        />
+        {type === "alarms" ? (
+          <div className="ops-charts">
+            <AlarmPriorityChart data={alarmPriority} loading={itemsQuery.isLoading} />
+            <AlarmTrendChart data={alarmTrend} loading={itemsQuery.isLoading} />
+          </div>
+        ) : null }
+      </div>
     </AppShell>
   );
 }

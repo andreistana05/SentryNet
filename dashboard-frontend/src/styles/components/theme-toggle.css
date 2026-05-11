@@ -10,3 +10,40 @@
   cursor: pointer;
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
+
+.theme-toggle:hover,
+.theme-toggle:focus-visible {
+  border-color: rgba(103, 232, 249, 0.32);
+  box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.12);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.theme-toggle-icon {
+  position: relative;
+  width: 1rem;
+  height: 1rem;
+  color: var(--theme-toggle-icon);
+}
+
+.theme-toggle-icon.sun {
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 0.2rem rgba(103, 232, 249, 0.16);
+}
+
+.theme-toggle-icon.moon {
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.theme-toggle-icon.moon::after {
+  content: "";
+  position: absolute;
+  top: 0.05rem;
+  right: -0.08rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+}
