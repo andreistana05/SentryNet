@@ -96,6 +96,13 @@
   overflow: hidden;
 }
 
+.col .table-container {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 .col .table-container .collapsible-panel-body {
   flex: 1;
   min-height: 0;

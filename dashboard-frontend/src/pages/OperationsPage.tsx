@@ -348,12 +348,12 @@ function OperationsPage({ type }: { type: OperationType }) {
   const updateTicketStatusMutation = useUpdateTicketStatusMutation();
   const devices = devicesQuery.data ?? EMPTY_DEVICES;
   const items = itemsQuery.data ?? [];
-  const alarmPriority = useMemo(
-    () => (type === "alarms" ? buildAlarmPriority(items) : []),
+  const priorityChartData = useMemo(
+    () => (type === "alarms" || type === "incidents" ? buildAlarmPriority(items) : []),
     [type, items],
   );
-  const alarmTrend = useMemo(
-    () => (type === "alarms" ? buildAlarmTrend(items) : []),
+  const trendChartData = useMemo(
+    () => (type === "alarms"  || type === "incidents" ? buildAlarmTrend(items) : []),
     [type, items],
   );
   const config = pageCopy[type];
@@ -459,10 +459,20 @@ function OperationsPage({ type }: { type: OperationType }) {
           columns={columns[type]}
           emptyMessage={`No ${type} are available right now.`}
         />
-        {type === "alarms" ? (
+        {(type === "alarms" || type === "incidents") ? (
           <div className="ops-charts">
-            <AlarmPriorityChart data={alarmPriority} loading={itemsQuery.isLoading} />
-            <AlarmTrendChart data={alarmTrend} loading={itemsQuery.isLoading} />
+            <AlarmPriorityChart 
+              data={priorityChartData} 
+              loading={itemsQuery.isLoading} 
+              eyebrow="Priority breakdown"
+              subtitle={type === "alarms" ? "Alarms by severity" : "Incidents by priority" }  
+            />
+            <AlarmTrendChart 
+              data={trendChartData} 
+              loading={itemsQuery.isLoading} 
+              eyebrow={type === "alarms" ? "Alarm Trend" : "Incident Trend"}
+              subtitle="Volume over time"  
+            />
           </div>
         ) : null }
       </div>

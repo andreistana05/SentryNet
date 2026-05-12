@@ -5,15 +5,17 @@ import type { StatusBreakdownDatum } from "../types/domain";
 interface AlarmPriorityChartProps {
     data: StatusBreakdownDatum[];
     loading: boolean;
+    eyebrow?: string;
+    subtitle?: string;
 }
 
-function AlarmPriorityChart({data, loading}: AlarmPriorityChartProps) {
+function AlarmPriorityChart({data, loading, eyebrow = "Priority breakdown", subtitle = "Alarms by severity" }: AlarmPriorityChartProps) {
     return (
         <section className="table-container chart-panel">
             <div className="table-header">
                 <div>
-                    <span className="eyebrow">Priority Breakdown</span>
-                    <h3>Alarms by severity</h3>
+                    <span className="eyebrow">{eyebrow}</span>
+                    <h3>{subtitle}</h3>
                 </div>
             </div>
 

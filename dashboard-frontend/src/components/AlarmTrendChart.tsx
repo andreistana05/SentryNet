@@ -5,15 +5,17 @@ import type { AlarmTrendDatum } from "../types/domain";
 interface AlarmTrendChartProps {
     data: AlarmTrendDatum[];
     loading: boolean;
+    eyebrow?: string;
+    subtitle?: string;
 }
 
-function AlarmTrendChart({data, loading}: AlarmTrendChartProps) {
+function AlarmTrendChart({data, loading, eyebrow = "Alarm Trend", subtitle = "Volume over time" }: AlarmTrendChartProps) {
     return (
         <section className="table-container chart-panel">
             <div className="table-header">
                 <div>
-                    <span className="eyebrow">Alarm Trend</span>
-                    <h3>Volume over time</h3>
+                    <span className="eyebrow">{eyebrow}</span>
+                    <h3>{subtitle}</h3>
                 </div>
             </div>
             {loading ? <div className="table-state">Loading chart data...</div> : null }
