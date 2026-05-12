@@ -16,13 +16,14 @@ var ErrNotFound = errors.New("record not found")
 
 // Repositories groups every repository interface in one convenient container.
 type Repositories struct {
-	User     UserRepository
-	Device   DeviceRepository
-	Metric   MetricRepository
-	Alarm    AlarmRepository
-	Incident IncidentRepository
-	Problem  ProblemRepository
-	Ticket   TicketRepository
+	User            UserRepository
+	Device          DeviceRepository
+	Metric          MetricRepository
+	MetricAggregate MetricAggregateRepository
+	Alarm           AlarmRepository
+	Incident        IncidentRepository
+	Problem         ProblemRepository
+	Ticket          TicketRepository
 }
 
 // nullUUID handles scanning nullable UUID columns (e.g. alarm_id on incidents)
@@ -86,6 +87,20 @@ func Migrate(db *sql.DB) error {
 			value		FLOAT8		NOT NULL,
 			unit		VARCHAR(64),
 			timestamp	TIMESTAMPTZ	NOT NULL
+		);
+		CREATE TABLE IF NOT EXISTS metric_aggregates (
+			id				UUID		PRIMARY KEY,
+			device_id		UUID		NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+			type			VARCHAR(50)	NOT NULL,
+			avg_value		FLOAT8		NOT NULL,
+			min_value		FLOAT8		NOT NULL,
+			max_value		FLOAT8		NOT NULL,
+			sample_count	INT			NOT NULL,
+			unit			VARCHAR(64),
+			period_start	TIMESTAMPTZ	NOT NULL,
+			period_end		TIMESTAMPTZ	NOT NULL,
+			created_at		TIMESTAMPTZ	NOT NULL DEFAULT NOW(),
+			UNIQUE (device_id, type, period_start)
 		);
 		CREATE TABLE IF NOT EXISTS alarms (
 			id					UUID			PRIMARY KEY,
@@ -163,12 +178,13 @@ func Migrate(db *sql.DB) error {
 
 func NewRepositories(db *sql.DB) *Repositories {
 	return &Repositories{
-		User:     newUserRepository(db),
-		Device:   newDeviceRepository(db),
-		Metric:   newMetricRepository(db),
-		Alarm:    newAlarmRepository(db),
-		Incident: newIncidentRepository(db),
-		Problem:  newProblemRepository(db),
-		Ticket:   newTicketRepository(db),
+		User:            newUserRepository(db),
+		Device:          newDeviceRepository(db),
+		Metric:          newMetricRepository(db),
+		MetricAggregate: newMetricAggregateRepository(db),
+		Alarm:           newAlarmRepository(db),
+		Incident:        newIncidentRepository(db),
+		Problem:         newProblemRepository(db),
+		Ticket:          newTicketRepository(db),
 	}
 }
