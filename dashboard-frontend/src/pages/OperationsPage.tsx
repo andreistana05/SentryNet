@@ -349,12 +349,12 @@ function OperationsPage({ type }: { type: OperationType }) {
   const devices = devicesQuery.data ?? EMPTY_DEVICES;
   const items = itemsQuery.data ?? [];
   const priorityChartData = useMemo(
-    () => (type === "alarms" || type === "incidents" ? buildAlarmPriority(items) : []),
-    [type, items],
+  () => buildAlarmPriority(items),
+  [items],
   );
   const trendChartData = useMemo(
-    () => (type === "alarms"  || type === "incidents" ? buildAlarmTrend(items) : []),
-    [type, items],
+  () => buildAlarmTrend(items),
+  [items],
   );
   const config = pageCopy[type];
   const pendingTicketId = updateTicketStatusMutation.variables?.ticketId;
@@ -459,22 +459,31 @@ function OperationsPage({ type }: { type: OperationType }) {
           columns={columns[type]}
           emptyMessage={`No ${type} are available right now.`}
         />
-        {(type === "alarms" || type === "incidents") ? (
-          <div className="ops-charts">
-            <AlarmPriorityChart 
-              data={priorityChartData} 
-              loading={itemsQuery.isLoading} 
-              eyebrow="Priority breakdown"
-              subtitle={type === "alarms" ? "Alarms by severity" : "Incidents by priority" }  
-            />
-            <AlarmTrendChart 
-              data={trendChartData} 
-              loading={itemsQuery.isLoading} 
-              eyebrow={type === "alarms" ? "Alarm Trend" : "Incident Trend"}
-              subtitle="Volume over time"  
-            />
-          </div>
-        ) : null }
+        {(() => {
+    const labels: Record<string, { eyebrow: string; subtitle: string; trendEyebrow: string }> = {
+    alarms:    { eyebrow: "Priority Breakdown", subtitle: "Alarms by severity",    trendEyebrow: "Alarm Trend"    },
+    incidents: { eyebrow: "Priority Breakdown", subtitle: "Incidents by priority", trendEyebrow: "Incident Trend" },
+    tickets:   { eyebrow: "Priority Breakdown", subtitle: "Tickets by priority",   trendEyebrow: "Ticket Trend"   },
+    problems:  { eyebrow: "Priority Breakdown", subtitle: "Problems by priority",  trendEyebrow: "Problem Trend"  },
+  };
+  const l = labels[type];
+  return (
+    <div className="ops-charts">
+      <AlarmPriorityChart
+        data={priorityChartData}
+        loading={itemsQuery.isLoading}
+        eyebrow={l.eyebrow}
+        subtitle={l.subtitle}
+      />
+      <AlarmTrendChart
+        data={trendChartData}
+        loading={itemsQuery.isLoading}
+        eyebrow={l.trendEyebrow}
+        subtitle="Volume over time"
+      />
+    </div>
+  );
+})()}
       </div>
     </AppShell>
   );
