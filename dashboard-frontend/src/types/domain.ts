@@ -197,3 +197,8 @@ export interface AlarmTrendDatum {
   date: string;
   count: number;
 }
+
+export interface GroupWorkloadDatum {
+  group: string;
+  count: number;
+}

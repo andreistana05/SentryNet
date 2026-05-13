@@ -17,8 +17,8 @@ import { TICKET_STATUS_OPTIONS } from "../services/dashboardService";
 import type { Alarm, Device, Incident, OperationType, Problem, Ticket, TicketNote, TicketStatus } from "../types/domain";
 import AlarmPriorityChart from "../components/AlarmPriorityChart";
 import AlarmTrendChart from "../components/AlarmTrendChart";
-import { buildAlarmPriority, buildAlarmTrend } from "../lib/charts";
-
+import { buildAlarmPriority, buildAlarmTrend, buildAlarmTypeBreakdown, buildGroupWorkload, chartPalette } from "../lib/charts";
+import GroupWorkloadChart from "../components/GroupWorkloadChart";
 const EMPTY_DEVICES: Device[] = [];
 
 const pageCopy = {
@@ -356,6 +356,8 @@ function OperationsPage({ type }: { type: OperationType }) {
   () => buildAlarmTrend(items),
   [items],
   );
+  const groupWorkloadData = useMemo(() => buildGroupWorkload(items), [items]);
+  const alarmTypeData = useMemo(() => buildAlarmTypeBreakdown(items), [items]);
   const config = pageCopy[type];
   const pendingTicketId = updateTicketStatusMutation.variables?.ticketId;
   const [openNotesTicketId, setOpenNotesTicketId] = useState<string | number | null>(null);
@@ -451,7 +453,7 @@ function OperationsPage({ type }: { type: OperationType }) {
         ) : null }
       </section>
 
-      <div className="ops-body">
+      <div className={`ops-body${type === "alarms" ? " ops-body--split" : ""}`}>
         <OperationsTable
           eyebrow={config.eyebrow}
           title={`${config.eyebrow} records`}
@@ -459,6 +461,23 @@ function OperationsPage({ type }: { type: OperationType }) {
           columns={columns[type]}
           emptyMessage={`No ${type} are available right now.`}
         />
+        {type === "alarms" ? (
+          <div className="ops-bottom">
+            <GroupWorkloadChart
+              data={groupWorkloadData}
+              loading={itemsQuery.isLoading}
+              eyebrow="Group Workload"
+              subtitle="Alarms per team"
+            />
+            <GroupWorkloadChart
+              data={alarmTypeData}
+              loading={itemsQuery.isLoading}
+              eyebrow="Alarm Types"
+              subtitle="By metric triggered"
+              colors={[chartPalette.fuchsia, chartPalette.lime, chartPalette.sky, chartPalette.rose]}
+            />
+          </div>
+        ) : null}
         {(() => {
     const labels: Record<string, { eyebrow: string; subtitle: string; trendEyebrow: string }> = {
     alarms:    { eyebrow: "Priority Breakdown", subtitle: "Alarms by severity",    trendEyebrow: "Alarm Trend"    },

@@ -5,6 +5,7 @@ import type {
   OperationRecord,
   OperationsWorkloadDatum,
   StatusBreakdownDatum,
+  GroupWorkloadDatum,
 } from "../types/domain";
 
 export const chartPalette = {
@@ -14,6 +15,12 @@ export const chartPalette = {
   amber: "#fbbf24",
   green: "#4ade80",
   muted: "#7487a3",
+  violet: "#a78bfa",
+  orange: "#fb923c",
+  teal: "#2dd4bf",
+  sky: "#38bdf8",
+  fuchsia: "#e879f9",
+  lime: "#a3e635",
 };
 
 export function buildStatusBreakdown(devices: Device[], stats: DashboardStats): StatusBreakdownDatum[] {
@@ -84,3 +91,29 @@ export function buildAlarmTrend(alarms: OperationRecord[]): AlarmTrendDatum[] {
       count,
     }));
 }
+
+export function buildAlarmTypeBreakdown(items: OperationRecord[]): GroupWorkloadDatum[] {
+  const counts = items.reduce<Record<string, number>>((acc, item) => {
+    const desc = String(item.alarm ?? item.description ?? "");
+    const match = desc.match(/^(\w+)\s+threshold/i);
+    const key = match ? match[1].replace(/_/g, " ") : "other";
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  return Object.entries(counts)
+    .map(([group, count]) => ({ group, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+export function buildGroupWorkload(items: OperationRecord[]): GroupWorkloadDatum[] {
+  const counts = items.reduce<Record<string, number>>((acc, item) => {
+    const key = String(item.assigned_group || "Unassigned");
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+  }, {});
+  return Object.entries(counts)
+    .map(([group, count]) => ({group, count}))
+    .sort((a, b) => b.count - a.count);
+}
+

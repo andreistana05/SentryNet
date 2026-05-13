@@ -134,9 +134,26 @@
   overflow: hidden;
 }
 
+.ops-body--split{
+  grid-template-rows: 1fr 1fr;
+}
+
 .ops-charts {
   display: grid;
   grid-template-rows: 1fr 1fr;
+  grid-column: 2;
+  gap: 0.65rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ops-body--split .ops-charts{
+  grid-row: 1/3;
+}
+
+.ops-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.65rem;
   min-height: 0;
   overflow: hidden;
