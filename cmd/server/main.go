@@ -40,10 +40,11 @@ func main() {
 	repos := repository.NewRepositories(db)
 	services := service.NewServices(repos, redis, cfg)
 
-	// Start background worker that marks stale devices as offline.
+	// Start background workers.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	services.Alarm.StartWorker(ctx)
+	services.MetricArchiver.StartWorker(ctx)
 
 	r := router.New(services, cfg)
 

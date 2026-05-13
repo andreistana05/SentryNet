@@ -53,6 +53,17 @@ type MetricRepository interface {
 	FindByDevice(deviceID uuid.UUID, filter MetricFilter) ([]models.Metric, error)
 	FindLatestByDevice(deviceID uuid.UUID) ([]models.Metric, error)
 	FindAll(filter MetricFilter) ([]models.Metric, error)
+	DeleteBefore(cutoff time.Time) (int64, error)
+}
+
+// MetricAggregateRepository defines operations on daily metric aggregates.
+type MetricAggregateRepository interface {
+	// InsertFromMetrics aggregates raw metrics older than cutoff (grouped by device/type/day)
+	// and inserts them as daily summaries. Uses ON CONFLICT DO NOTHING so it is idempotent.
+	// Returns the number of aggregate rows inserted.
+	InsertFromMetrics(cutoff time.Time) (int64, error)
+	FindByDevice(deviceID uuid.UUID, from, to time.Time) ([]models.MetricAggregate, error)
+	FindAll(from, to time.Time) ([]models.MetricAggregate, error)
 }
 
 // AlarmFilter holds optional filters for querying alarms.

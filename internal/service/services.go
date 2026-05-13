@@ -5,6 +5,7 @@ package service
 
 import (
 	"errors"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 
@@ -18,10 +19,11 @@ var ErrNotFound = errors.New("not found")
 
 // Services is a container for all service instances.
 type Services struct {
-	Auth   *AuthService
-	Device *DeviceService
-	Metric *MetricService
-	Alarm  *AlarmService
+	Auth           *AuthService
+	Device         *DeviceService
+	Metric         *MetricService
+	Alarm          *AlarmService
+	MetricArchiver *MetricArchiverService
 }
 
 func NewServices(repos *repository.Repositories, _ *redis.Client, cfg *config.Config) *Services {
@@ -40,11 +42,18 @@ func NewServices(repos *repository.Repositories, _ *redis.Client, cfg *config.Co
 	metricSvc := newMetricService(repos.Metric, alarmSvc)
 	deviceSvc := newDeviceService(repos.Device)
 	authSvc := newAuthService(repos.User, jwtMgr)
+	archiverSvc := newMetricArchiverService(
+		repos.Metric,
+		repos.MetricAggregate,
+		30*24*time.Hour, // retain raw metrics for 30 days
+		24*time.Hour,    // run archival once per day
+	)
 
 	return &Services{
-		Auth:   authSvc,
-		Device: deviceSvc,
-		Metric: metricSvc,
-		Alarm:  alarmSvc,
+		Auth:           authSvc,
+		Device:         deviceSvc,
+		Metric:         metricSvc,
+		Alarm:          alarmSvc,
+		MetricArchiver: archiverSvc,
 	}
 }

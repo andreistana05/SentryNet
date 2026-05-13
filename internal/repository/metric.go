@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"sentrynet/backend/internal/models"
@@ -127,6 +128,14 @@ func (r *metricRepository) FindAll(filter MetricFilter) ([]models.Metric, error)
 	}
 	defer rows.Close()
 	return scanMetrics(rows)
+}
+
+func (r *metricRepository) DeleteBefore(cutoff time.Time) (int64, error) {
+	res, err := r.db.Exec(`DELETE FROM metrics WHERE timestamp < $1`, cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
 }
 
 func scanMetric(s rowScanner) (*models.Metric, error) {
