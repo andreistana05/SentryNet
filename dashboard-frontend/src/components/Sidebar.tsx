@@ -26,6 +26,7 @@ function Sidebar({
     { label: "Incidents", to: "/dashboard/incidents", end: false },
     { label: "Tickets", to: "/dashboard/tickets", end: false },
     { label: "Problems", to: "/dashboard/problems", end: false },
+    { label: "Groups", to :"/dashboard/groups", end: false},
   ];
 
   return (

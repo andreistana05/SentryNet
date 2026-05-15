@@ -17,7 +17,7 @@ import { TICKET_STATUS_OPTIONS } from "../services/dashboardService";
 import type { Alarm, Device, Incident, OperationType, Problem, Ticket, TicketNote, TicketStatus } from "../types/domain";
 import AlarmPriorityChart from "../components/AlarmPriorityChart";
 import AlarmTrendChart from "../components/AlarmTrendChart";
-import { buildAlarmPriority, buildAlarmTrend, buildAlarmTypeBreakdown, buildGroupWorkload, chartPalette } from "../lib/charts";
+import { buildAlarmPriority, buildAlarmTrend, buildAlarmTypeBreakdown, buildGroupWorkload, buildIncidentAgeBuckets, buildResolutionFunnel, chartPalette } from "../lib/charts";
 import GroupWorkloadChart from "../components/GroupWorkloadChart";
 const EMPTY_DEVICES: Device[] = [];
 
@@ -357,6 +357,8 @@ function OperationsPage({ type }: { type: OperationType }) {
   [items],
   );
   const groupWorkloadData = useMemo(() => buildGroupWorkload(items), [items]);
+  const incidentAgeData = useMemo(() => buildIncidentAgeBuckets(items), [items]);
+  const resolutionFunnelData = useMemo(() => buildResolutionFunnel(items), [items]); 
   const alarmTypeData = useMemo(() => buildAlarmTypeBreakdown(items), [items]);
   const config = pageCopy[type];
   const pendingTicketId = updateTicketStatusMutation.variables?.ticketId;
@@ -453,7 +455,7 @@ function OperationsPage({ type }: { type: OperationType }) {
         ) : null }
       </section>
 
-      <div className={`ops-body${type === "alarms" ? " ops-body--split" : ""}`}>
+      <div className={`ops-body${(type === "alarms" || type === "incidents") ? " ops-body--split" : ""}`}>
         <OperationsTable
           eyebrow={config.eyebrow}
           title={`${config.eyebrow} records`}
@@ -475,6 +477,24 @@ function OperationsPage({ type }: { type: OperationType }) {
               eyebrow="Alarm Types"
               subtitle="By metric triggered"
               colors={[chartPalette.fuchsia, chartPalette.lime, chartPalette.sky, chartPalette.rose]}
+            />
+          </div>
+        ) : null}
+        {type === "incidents" ? (
+          <div className = "ops-bottom">
+            <GroupWorkloadChart
+              data={incidentAgeData}
+              loading={itemsQuery.isLoading}
+              eyebrow="Incident Age"
+              subtitle="Open incidents by age"
+              colors={[chartPalette.green, chartPalette.cyan, chartPalette.amber, chartPalette.rose]}
+            />
+            <GroupWorkloadChart
+              data={resolutionFunnelData}
+              loading={itemsQuery.isLoading}
+              eyebrow="Resolution funnel"
+              subtitle="Incidents by stage"
+              colors={[chartPalette.sky, chartPalette.teal, chartPalette.violet, chartPalette.fuchsia, chartPalette.lime]}
             />
           </div>
         ) : null}

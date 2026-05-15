@@ -1,0 +1,164 @@
+.groups-body {
+    display: grid;
+    grid-template-columns: minmax(280px, 360px) 1fr;
+    gap: 0.65rem;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.groups-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem 0.75rem;
+}
+
+.groups-panel-body {
+    padding: 0 0.75rem 0.75rem;
+    overflow-y: auto;
+    display: grid;
+    gap: 0.5rem;
+    align-content: start;
+}
+
+.group-card {
+    padding: 0.85rem 1rem;
+    background: rgba(148, 163, 184, 0.06);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    border-radius: var(--radius-md);
+    display: grid;
+    gap: 0.3rem;
+}
+
+.group-card-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.group-card-row strong {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 0.95rem;
+}
+
+.group-member-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    background: rgba(103, 232, 249, 0.12);
+    color: var(--cyan);
+}
+
+.group-card-desc {
+    margin: 0;
+    font-size: 0.83rem;
+    color: var(--text-muted);
+}
+
+.panel-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 1rem;
+    background: rgba(103, 232, 249, 0.1);
+    border: 1px solid rgba(103,232,249, 0.22);
+    border-radius: 999px;
+    color: var(--cyan);
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 160ms ease;
+}
+
+.panel-add-btn:hover {
+    background: rgba(103, 232, 249, 0.2);
+}
+
+.role-badge-admin {
+    background: rgba(251, 191, 36, 0.15); 
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
+.role-badge-operator {
+    background: rgba(103, 232, 249, 0.12);
+    color: var(--cyan);
+    border: 1px solid rgba(103, 232, 249, 0.22);
+}
+
+.role-badge-viewer {
+    background: rgba(74, 222, 128, 0.12);
+    color: #4ade80;
+    border: 1px solid rgba(74, 222, 128, 0.2);
+}
+
+.role-badge{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.modal-overlay {
+    width: min(460px, 92vw);
+    padding: 1.5rem;
+    background: var(--dropdown-bg);
+    border: 1px solid var(--dropdown-border);
+    border-radius: 1.2rem;
+    box-shadow: var(--dropdown-shadow);
+}
+
+.modal-card .eyebrow {
+    margin-bottom: 0.3rem;
+}
+
+.modal-card h3 {
+    margin: 0 0 1.25rem;
+    font-family: "Space Grotesk", sans-serif;
+}
+
+.modal-form {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.modal-field {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.modal-field label {
+    font-size: 0.83rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.modal-field input,
+.modal-field select {
+    padding: 0.7rem 0.85rem;
+    background: var(--field-bg);
+    border: 1px solid var(--field-border);
+    border-radius: 0.75rem;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.modal-field input:focus,
+.modal-field select:focus {
+    border-color: rgba(103, 232, 249, 0.35);
+    box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.12);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    margin-top: 0.4rem;
+}

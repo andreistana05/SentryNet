@@ -202,3 +202,17 @@ export interface GroupWorkloadDatum {
   group: string;
   count: number;
 }
+
+export interface Group {
+  id: number;
+  name: string;
+  description: string;
+}
+
+export interface Employee {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  group: string;
+}

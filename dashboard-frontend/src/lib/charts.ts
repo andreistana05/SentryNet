@@ -117,3 +117,43 @@ export function buildGroupWorkload(items: OperationRecord[]): GroupWorkloadDatum
     .sort((a, b) => b.count - a.count);
 }
 
+export function buildIncidentAgeBuckets(items: OperationRecord[]): GroupWorkloadDatum[] {
+  const now = Date.now();
+  const buckets: Record<string, number> = {"< 1h" : 0, "1-4h": 0, "4-24h": 0, "> 24h": 0 };
+  for (const item of items) {
+    const status = String(item.status ?? "").toLowerCase();
+    if (status === "closed" || status === "resolved") continue;
+    
+    const raw = String(item.submit_date ?? item.created_at ?? "");
+    const parsed = new Date(raw);
+    if(Number.isNaN(parsed.getTime())) continue;
+    
+    const ageHours = (now - parsed.getTime()) / (1000 * 60 * 60);
+    if(ageHours < 1) buckets["< 1h"]++;
+    else if (ageHours < 4 ) buckets["1-4h"]++;
+    else if (ageHours < 24) buckets["4-24h"]++;
+    else buckets["> 24h"]++;
+    }
+    return Object.entries(buckets).map(([group, count]) => ({ group, count}));
+}
+
+const FUNNEL_STAGE_ORDER = ["open", "assigned", "in-progress", "investigating", "resolved", "closed"];
+
+export function buildResolutionFunnel(items: OperationRecord[]): GroupWorkloadDatum[] {
+  const counts = items.reduce<Record<string, number>>((acc, item) => {
+    const key = String(item.status ?? "unknown").toLowerCase();
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  
+  const known = FUNNEL_STAGE_ORDER
+    .filter((stage) => counts[stage])
+    .map((stage) => ({group: stage, count: counts[stage]}));
+
+  const other = Object.entries(counts)
+    .filter(([key]) => !FUNNEL_STAGE_ORDER.includes(key))
+    .map(([group, count]) => ({group, count}))
+    .sort((a, b) => b.count - a.count);
+  
+    return [...known, ...other];
+}
