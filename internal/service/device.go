@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 
 	"sentrynet/backend/internal/models"
 	"sentrynet/backend/internal/repository"
@@ -68,7 +67,7 @@ func (s *DeviceService) List(filter repository.DeviceFilter) ([]models.Device, e
 func (s *DeviceService) Get(id uuid.UUID) (*models.Device, error) {
 	device, err := s.devices.FindByID(id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, repository.ErrNotFound) {
 			return nil, ErrNotFound
 		}
 		return nil, err
@@ -128,7 +127,7 @@ func (s *DeviceService) EnsureDevice(hostname, ip string, deviceType models.Devi
 		}
 		return device, nil
 	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if !errors.Is(err, repository.ErrNotFound) {
 		return nil, err
 	}
 

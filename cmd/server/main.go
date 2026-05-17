@@ -45,6 +45,7 @@ func main() {
 	defer cancel()
 	services.Alarm.StartWorker(ctx)
 	services.MetricArchiver.StartWorker(ctx)
+	services.SLA.StartWorker(ctx)
 
 	r := router.New(services, cfg)
 

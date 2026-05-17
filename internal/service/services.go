@@ -24,9 +24,11 @@ type Services struct {
 	Metric         *MetricService
 	Alarm          *AlarmService
 	MetricArchiver *MetricArchiverService
+	Group          *GroupService
+	SLA            *SLAService
 }
 
-func NewServices(repos *repository.Repositories, _ *redis.Client, cfg *config.Config) *Services {
+func NewServices(repos *repository.Repositories, rdb *redis.Client, cfg *config.Config) *Services {
 	jwtMgr := jwt.NewManager(cfg.JWTSecret, cfg.JWTExpiry)
 
 	alarmSvc := newAlarmService(
@@ -37,6 +39,7 @@ func NewServices(repos *repository.Repositories, _ *redis.Client, cfg *config.Co
 		repos.Ticket,
 		cfg.OfflineCheckInterval,
 		cfg.HeartbeatTimeout,
+		rdb,
 	)
 
 	metricSvc := newMetricService(repos.Metric, alarmSvc)
@@ -49,11 +52,16 @@ func NewServices(repos *repository.Repositories, _ *redis.Client, cfg *config.Co
 		24*time.Hour,    // run archival once per day
 	)
 
+	groupSvc := newGroupService(repos.Group, repos.Employee, repos.TicketWorker, repos.Ticket)
+	slaSvc := newSLAService(repos.Ticket, 15*time.Minute)
+
 	return &Services{
 		Auth:           authSvc,
 		Device:         deviceSvc,
 		Metric:         metricSvc,
 		Alarm:          alarmSvc,
 		MetricArchiver: archiverSvc,
+		Group:          groupSvc,
+		SLA:            slaSvc,
 	}
 }

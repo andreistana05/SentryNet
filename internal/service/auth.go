@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 
 	"sentrynet/backend/internal/models"
 	"sentrynet/backend/internal/repository"
@@ -81,7 +80,7 @@ func (s *AuthService) Register(req RegisterRequest) (*AuthResponse, error) {
 func (s *AuthService) Login(req LoginRequest) (*AuthResponse, error) {
 	user, err := s.users.FindByEmail(strings.ToLower(req.Email))
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, repository.ErrNotFound) {
 			return nil, errors.New("invalid credentials")
 		}
 		return nil, err

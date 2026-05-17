@@ -141,6 +141,37 @@ type TicketFilter struct {
 	Offset     int
 }
 
+// GroupRepository defines CRUD operations on groups.
+type GroupRepository interface {
+	Create(group *models.Group) error
+	FindAll() ([]models.Group, error)
+	FindByID(id uuid.UUID) (*models.Group, error)
+	Update(group *models.Group) error
+	Delete(id uuid.UUID) error
+}
+
+// EmployeeFilter holds optional filters for listing employees.
+type EmployeeFilter struct {
+	GroupID *uuid.UUID
+	Search  string // matches name or email
+}
+
+// EmployeeRepository defines CRUD operations on employees.
+type EmployeeRepository interface {
+	Create(emp *models.Employee) error
+	FindAll(filter EmployeeFilter) ([]models.Employee, error)
+	FindByID(id uuid.UUID) (*models.Employee, error)
+	Update(emp *models.Employee) error
+	Delete(id uuid.UUID) error
+}
+
+// TicketWorkerRepository manages which employees are assigned to a ticket.
+type TicketWorkerRepository interface {
+	Assign(ticketID, employeeID uuid.UUID) error
+	Unassign(ticketID, employeeID uuid.UUID) error
+	FindByTicket(ticketID uuid.UUID) ([]models.TicketWorker, error)
+}
+
 // TicketRepository defines operations on tickets and their audit updates.
 type TicketRepository interface {
 	Create(ticket *models.Ticket) error

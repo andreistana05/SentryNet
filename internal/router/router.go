@@ -43,6 +43,7 @@ func New(services *service.Services, cfg *config.Config) *gin.Engine {
 	alarmH := handler.NewAlarmHandler(services.Alarm)
 	ingestH := handler.NewIngestHandler(services.Device, services.Metric, services.Alarm)
 	statusH := handler.NewStatusHandler(services.Device, services.Alarm)
+	groupH := handler.NewGroupHandler(services.Group)
 
 	api := r.Group("/api/v1")
 
@@ -114,6 +115,29 @@ func New(services *service.Services, cfg *config.Config) *gin.Engine {
 			tickets.PATCH("/:id/status", alarmH.UpdateTicketStatus)
 			tickets.GET("/:id/notes", alarmH.GetTicketNotes)
 			tickets.POST("/:id/notes", alarmH.CreateTicketNote)
+			tickets.GET("/:id/workers", groupH.GetTicketWorkers)
+			tickets.POST("/:id/workers", groupH.AssignTicketWorker)
+			tickets.DELETE("/:id/workers/:employeeId", groupH.UnassignTicketWorker)
+		}
+
+		// Groups
+		groups := protected.Group("/groups")
+		{
+			groups.GET("", groupH.ListGroups)
+			groups.POST("", groupH.CreateGroup)
+			groups.GET("/:id", groupH.GetGroup)
+			groups.PUT("/:id", groupH.UpdateGroup)
+			groups.DELETE("/:id", groupH.DeleteGroup)
+		}
+
+		// Employees
+		employees := protected.Group("/employees")
+		{
+			employees.GET("", groupH.ListEmployees)
+			employees.POST("", groupH.CreateEmployee)
+			employees.GET("/:id", groupH.GetEmployee)
+			employees.PUT("/:id", groupH.UpdateEmployee)
+			employees.DELETE("/:id", groupH.DeleteEmployee)
 		}
 	}
 

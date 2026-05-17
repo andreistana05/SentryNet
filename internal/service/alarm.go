@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
+	"github.com/redis/go-redis/v9"
 
 	"sentrynet/backend/internal/models"
 	"sentrynet/backend/internal/repository"
@@ -150,6 +150,7 @@ type AlarmService struct {
 	problems  repository.ProblemRepository
 	devices   repository.DeviceRepository
 	tickets   repository.TicketRepository
+	redis     *redis.Client
 	interval  time.Duration
 	timeout   time.Duration
 
@@ -167,6 +168,7 @@ func newAlarmService(
 	tickets repository.TicketRepository,
 	offlineCheckInterval time.Duration,
 	heartbeatTimeout time.Duration,
+	rdb *redis.Client,
 ) *AlarmService {
 	return &AlarmService{
 		alarms:        alarms,
@@ -174,6 +176,7 @@ func newAlarmService(
 		problems:      problems,
 		devices:       devices,
 		tickets:       tickets,
+		redis:         rdb,
 		interval:      offlineCheckInterval,
 		timeout:       heartbeatTimeout,
 		breachTracker: make(map[string]*breachState),
@@ -188,7 +191,8 @@ func (s *AlarmService) EvaluateMetrics(deviceID uuid.UUID, _ models.DeviceType, 
 			continue
 		}
 		if item.Type == models.MetricPortStatus {
-			continue // port_status is stored as a metric but never triggers alarms
+			s.evaluatePortStatus(deviceID, item)
+			continue
 		}
 		rule, ok := metricRules[item.Type]
 		if !ok || len(rule.Tiers) == 0 {
@@ -237,14 +241,25 @@ func (s *AlarmService) evaluatePortStatus(deviceID uuid.UUID, item IngestMetricI
 	go s.createOrEscalate(alarmName, models.PriorityHigh, "Network Team")
 }
 
-// deviceLabel returns "hostname (ip)" for use in alarm names, falling back to
-// the raw UUID if the device cannot be found.
+// deviceLabel returns "hostname (ip)" for use in alarm names.
+// Results are cached in Redis for 5 minutes to avoid a DB round-trip on every
+// metric evaluation cycle.
 func (s *AlarmService) deviceLabel(deviceID uuid.UUID) string {
+	if s.redis != nil {
+		key := "device:label:" + deviceID.String()
+		if label, err := s.redis.Get(context.Background(), key).Result(); err == nil {
+			return label
+		}
+	}
 	device, err := s.devices.FindByID(deviceID)
 	if err != nil || device == nil {
 		return deviceID.String()
 	}
-	return fmt.Sprintf("%s (%s)", device.Name, device.IPAddress)
+	label := fmt.Sprintf("%s (%s)", device.Name, device.IPAddress)
+	if s.redis != nil {
+		s.redis.Set(context.Background(), "device:label:"+deviceID.String(), label, 5*time.Minute)
+	}
+	return label
 }
 
 // evaluateMetric handles a single metric reading against a standard (ascending) rule.
@@ -615,7 +630,7 @@ func (s *AlarmService) List(filter repository.AlarmFilter) ([]models.Alarm, erro
 func (s *AlarmService) Get(id uuid.UUID) (*models.Alarm, error) {
 	alarm, err := s.alarms.FindByID(id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, repository.ErrNotFound) {
 			return nil, ErrNotFound
 		}
 		return nil, err
@@ -626,7 +641,7 @@ func (s *AlarmService) Get(id uuid.UUID) (*models.Alarm, error) {
 func (s *AlarmService) GetByNumber(number string) (*models.Alarm, error) {
 	alarm, err := s.alarms.FindByNumber(number)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, repository.ErrNotFound) {
 			return nil, ErrNotFound
 		}
 		return nil, err
@@ -673,7 +688,7 @@ func (s *AlarmService) ListIncidents(filter repository.IncidentFilter) ([]models
 func (s *AlarmService) GetIncident(id uuid.UUID) (*models.Incident, error) {
 	incident, err := s.incidents.FindByID(id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, repository.ErrNotFound) {
 			return nil, ErrNotFound
 		}
 		return nil, err
@@ -684,7 +699,7 @@ func (s *AlarmService) GetIncident(id uuid.UUID) (*models.Incident, error) {
 func (s *AlarmService) GetIncidentByNumber(number string) (*models.Incident, error) {
 	incident, err := s.incidents.FindByNumber(number)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, repository.ErrNotFound) {
 			return nil, ErrNotFound
 		}
 		return nil, err
@@ -719,7 +734,7 @@ func (s *AlarmService) ListProblems(filter repository.ProblemFilter) ([]models.P
 func (s *AlarmService) GetProblem(id uuid.UUID) (*models.Problem, error) {
 	problem, err := s.problems.FindByID(id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, repository.ErrNotFound) {
 			return nil, ErrNotFound
 		}
 		return nil, err
@@ -730,7 +745,7 @@ func (s *AlarmService) GetProblem(id uuid.UUID) (*models.Problem, error) {
 func (s *AlarmService) GetProblemByNumber(number string) (*models.Problem, error) {
 	problem, err := s.problems.FindByNumber(number)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, repository.ErrNotFound) {
 			return nil, ErrNotFound
 		}
 		return nil, err
@@ -761,7 +776,7 @@ func (s *AlarmService) ListTickets(filter repository.TicketFilter) ([]models.Tic
 func (s *AlarmService) GetTicket(id uuid.UUID) (*models.Ticket, error) {
 	ticket, err := s.tickets.FindByID(id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, repository.ErrNotFound) {
 			return nil, ErrNotFound
 		}
 		return nil, err
@@ -772,7 +787,7 @@ func (s *AlarmService) GetTicket(id uuid.UUID) (*models.Ticket, error) {
 func (s *AlarmService) GetTicketByNumber(number string) (*models.Ticket, error) {
 	ticket, err := s.tickets.FindByNumber(number)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, repository.ErrNotFound) {
 			return nil, ErrNotFound
 		}
 		return nil, err

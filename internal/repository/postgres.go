@@ -24,6 +24,9 @@ type Repositories struct {
 	Incident        IncidentRepository
 	Problem         ProblemRepository
 	Ticket          TicketRepository
+	Group           GroupRepository
+	Employee        EmployeeRepository
+	TicketWorker    TicketWorkerRepository
 }
 
 // nullUUID handles scanning nullable UUID columns (e.g. alarm_id on incidents)
@@ -172,6 +175,28 @@ func Migrate(db *sql.DB) error {
 			author_name	VARCHAR(255)	NOT NULL,
 			created_at	TIMESTAMPTZ		NOT NULL DEFAULT NOW()
 		);
+		CREATE TABLE IF NOT EXISTS groups (
+			id          UUID         PRIMARY KEY,
+			name        VARCHAR(255) NOT NULL UNIQUE,
+			description VARCHAR(500),
+			created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+			updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+		);
+		CREATE TABLE IF NOT EXISTS employees (
+			id         UUID         PRIMARY KEY,
+			group_id   UUID         NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+			name       VARCHAR(255) NOT NULL,
+			email      VARCHAR(255) NOT NULL UNIQUE,
+			role       VARCHAR(100),
+			created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+		);
+		CREATE TABLE IF NOT EXISTS ticket_workers (
+			ticket_id   UUID        NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+			employee_id UUID        NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+			assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			PRIMARY KEY (ticket_id, employee_id)
+		);
 	`)
 	return err
 }
@@ -186,5 +211,8 @@ func NewRepositories(db *sql.DB) *Repositories {
 		Incident:        newIncidentRepository(db),
 		Problem:         newProblemRepository(db),
 		Ticket:          newTicketRepository(db),
+		Group:           newGroupRepository(db),
+		Employee:        newEmployeeRepository(db),
+		TicketWorker:    newTicketWorkerRepository(db),
 	}
 }
