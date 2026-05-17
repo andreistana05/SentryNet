@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { clearStoredAuth, getStoredUsername } from "../lib/storage";
 import ThemeToggle from "./ThemeToggle";
 
@@ -52,7 +52,7 @@ function Header({slot} : HeaderProps) {
           <strong>{timeLabel}</strong>
         </div>
         <ThemeToggle />
-        <div className="role-pill">{username}</div>
+        <Link to="/dashboard/profile" className="role-pill profle-link">{username}</Link>
         <button className="logout-btn" onClick={handleLogout} type="button">Logout</button>
       </div>
     </header>

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getApiErrorMessage } from "../lib/apiError";
-import { clearStoredAuth, getStoredUsername, setStoredRole, setStoredToken, setStoredUsername } from "../lib/storage";
+import { clearStoredAuth, getStoredUsername, setStoredRole, setStoredToken, setStoredUsername, getStoredEmail, setStoredEmail } from "../lib/storage";
 import type {
   Alarm,
   CreateTicketNotePayload,
@@ -180,6 +180,7 @@ export function useLoginMutation() {
     mutationFn: async (payload: LoginPayload) => {
       const response = await loginUser(payload);
       setStoredToken(response.token);
+      setStoredEmail(payload.email);
       setStoredUsername(response.user?.username || response.username || payload.email.split("@")[0]);
       if (response.role) {
         setStoredRole(response.role);
@@ -199,6 +200,7 @@ export function useRegisterMutation() {
     mutationFn: async (payload: RegisterPayload) => {
       const response = await registerUser(payload);
       setStoredToken(response.token);
+      setStoredEmail(payload.email);
       setStoredUsername(response.user?.username || response.username || payload.username);
       if (response.user?.role) {
         setStoredRole(response.user.role);

@@ -6,6 +6,7 @@ import MetricsPage from "./pages/MetricsPage";
 import OperationsPage from "./pages/OperationsPage";
 import Register from "./pages/Register";
 import GroupsPage from "./pages/GroupsPage";
+import ProfilePage from "./pages/ProfilePage";
 import "./styles/global.css";
 import "./styles/layout.css";
 import "./styles/components/sidebar.css";
@@ -23,6 +24,7 @@ import "./styles/pages/metrics.css";
 import "./styles/pages/operations.css";
 import "./styles/pages/login.css";
 import "./styles/pages/groups.css";
+import "./styles/pages/profile.css";
 
 
 function App() {
@@ -84,6 +86,14 @@ function App() {
           element={
             <PrivateRoute>
               <GroupsPage></GroupsPage>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dashboard/profile"
+          element={
+            <PrivateRoute>
+              <ProfilePage />
             </PrivateRoute>
           }
         />

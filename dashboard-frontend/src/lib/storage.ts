@@ -2,6 +2,7 @@ const TOKEN_KEY = "token";
 const ROLE_KEY = "role";
 const USERNAME_KEY = "username";
 const THEME_KEY = "theme";
+const EMAIL_KEY = "email";;
 
 export type AppTheme = "dark" | "light";
 
@@ -17,6 +18,7 @@ export function clearStoredAuth(): void {
   window.localStorage.removeItem(TOKEN_KEY);
   window.localStorage.removeItem(ROLE_KEY);
   window.localStorage.removeItem(USERNAME_KEY);
+  window.localStorage.removeItem(EMAIL_KEY);
 }
 
 export function getStoredRole(): string {
@@ -53,3 +55,12 @@ export function resolveInitialTheme(): AppTheme {
 
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
+
+export function getStoredEmail(): string {
+  return window.localStorage.getItem(EMAIL_KEY) || "";
+}
+
+export function setStoredEmail(email: string): void {
+  window.localStorage.setItem(EMAIL_KEY, email);
+}
+
