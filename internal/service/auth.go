@@ -8,6 +8,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
 	"sentrynet/backend/internal/models"
@@ -96,4 +97,55 @@ func (s *AuthService) Login(req LoginRequest) (*AuthResponse, error) {
 	}
 
 	return &AuthResponse{Token: token, User: user}, nil
+}
+
+func (s *AuthService) VerifyPassword(userID uuid.UUID, password string) error {
+    user, err := s.users.FindByID(userID)
+    if err != nil {
+        return errors.New("user not found")
+    }
+    if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+        return errors.New("invalid password")
+    }
+    return nil
+}
+
+type UpdateMeRequest struct {
+    Username string `json:"username"`
+    Email    string `json:"email"`
+    Password string `json:"password"` // optional — only changed if non-empty
+}
+
+func (s *AuthService) UpdateMe(userID uuid.UUID, req UpdateMeRequest) (*models.User, error) {
+    user, err := s.users.FindByID(userID)
+    if err != nil {
+        return nil, errors.New("user not found")
+    }
+    if req.Username != "" {
+        user.Username = req.Username
+    }
+    if req.Email != "" {
+        user.Email = strings.ToLower(req.Email)
+    }
+    if req.Password != "" {
+        hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+        if err != nil {
+            return nil, err
+        }
+        user.PasswordHash = string(hash)
+    }
+    return user, s.users.Update(user)
+}
+
+func (s *AuthService) ListUsers() ([]*models.User, error) {
+    return s.users.List()
+}
+
+func (s *AuthService) UpdateUserRole(targetID uuid.UUID, role models.UserRole) (*models.User, error) {
+    user, err := s.users.FindByID(targetID)
+    if err != nil {
+        return nil, errors.New("user not found")
+    }
+    user.Role = role
+    return user, s.users.Update(user)
 }

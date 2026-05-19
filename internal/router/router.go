@@ -68,6 +68,12 @@ func New(services *service.Services, cfg *config.Config) *gin.Engine {
 	protected := api.Group("")
 	protected.Use(middleware.JWT(jwtMgr))
 	{
+		// Profile & user management
+		protected.POST("/auth/me/verify-password", authH.VerifyPassword)
+		protected.PUT("/auth/me", authH.UpdateMe)
+		protected.GET("/users", authH.ListUsers)
+		protected.PATCH("/users/:id/role", middleware.RequireRole("admin"), authH.UpdateUserRole)
+
 		protected.GET("/status", statusH.Overview)
 
 		// Devices
