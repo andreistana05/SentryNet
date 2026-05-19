@@ -9,7 +9,16 @@ REM ─────────────────────────�
 
 cd /d "%~dp0"
 
-REM Only install psutil if it is not already present (avoids pip hanging in background)
-python -c "import psutil" >nul 2>&1 || python -m pip install psutil --quiet >> "%~dp0agent.log" 2>&1
+set "PYTHON=%~dp0.venv\Scripts\python.exe"
+set "TEMP=%~dp0.tmp"
+set "TMP=%TEMP%"
+if not exist "%TEMP%" mkdir "%TEMP%"
 
-python -u main.py >> "%~dp0agent.log" 2>&1
+if not exist "%PYTHON%" (
+    python -m venv "%~dp0.venv" >> "%~dp0agent.log" 2>&1
+)
+
+REM Only install dependencies if they are not already present.
+"%PYTHON%" -c "import psutil, requests" >nul 2>&1 || "%PYTHON%" -m pip install -r requirements.txt --quiet >> "%~dp0agent.log" 2>&1
+
+"%PYTHON%" -u main.py >> "%~dp0agent.log" 2>&1

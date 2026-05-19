@@ -14,6 +14,21 @@ import logging
 import psutil
 
 
+def _hidden_subprocess_kwargs():
+    """Return Windows-only subprocess flags that prevent console popups."""
+    if os.name != "nt":
+        return {}
+
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = subprocess.SW_HIDE
+
+    return {
+        "creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        "startupinfo": startupinfo,
+    }
+
+
 def collect_temperature():
     """Return CPU temperature in Celsius, or None if unavailable."""
     # psutil sensors — works on Linux/macOS
@@ -37,21 +52,22 @@ def collect_temperature():
                     " | Select-Object -ExpandProperty CurrentTemperature",
                 ],
                 capture_output=True, text=True, timeout=5,
+                **_hidden_subprocess_kwargs(),
             )
-            logging.warning(f"[TEMP DEBUG] stdout={result.stdout!r} stderr={result.stderr!r}")
+            if result.stderr:
+                logging.debug("Temperature unavailable from Windows WMI: %s", result.stderr.strip())
             for line in result.stdout.splitlines():
                 line = line.strip()
                 if not line:
                     continue
                 try:
                     celsius = (float(line) / 10.0) - 273.15
-                    logging.warning(f"[TEMP DEBUG] raw={line} celsius={celsius}")
                     if 0 < celsius < 150:
                         return round(celsius, 1)
                 except ValueError:
                     continue
         except Exception as e:
-            logging.warning(f"[TEMP DEBUG] exception: {e}")
+            logging.debug("Temperature collection failed: %s", e)
 
     return None
 
