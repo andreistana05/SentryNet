@@ -10,6 +10,21 @@ import platform
 import subprocess
 
 
+def _hidden_subprocess_kwargs():
+    """Return Windows-only subprocess flags that prevent console popups."""
+    if os.name != "nt":
+        return {}
+
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = subprocess.SW_HIDE
+
+    return {
+        "creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        "startupinfo": startupinfo,
+    }
+
+
 def _run_command(command):
     """Run a subprocess command and return its stdout as a stripped string."""
     try:
@@ -18,7 +33,8 @@ def _run_command(command):
             capture_output=True,
             text=True,
             timeout=10,
-            check=False
+            check=False,
+            **_hidden_subprocess_kwargs(),
         )
         return (result.stdout or "").strip()
     except Exception:
