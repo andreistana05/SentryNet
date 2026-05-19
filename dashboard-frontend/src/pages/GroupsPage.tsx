@@ -1,47 +1,32 @@
 import { useState, type FormEvent } from "react";
 import AppShell from "../components/AppShell";
-import { useDashboardOverview, useDevices } from "../hooks/useDashboardData";
+import { useDashboardOverview, useDevices, useGroups, useEmployees, useCreateGroupMutation, useCreateEmployeeMutation } from "../hooks/useDashboardData";
 import { buildDashboardStats } from "../lib/dashboard";
 import { getStoredRole } from "../lib/storage";
-import type { Employee, Group } from "../types/domain";
+import type { CreateEmployeePayload, CreateGroupPayload, Group } from "../types/domain";
 
 const EMPTY_DEVICES: never[] = [];
 const ROLE_OPTIONS = ["Admin", "Operator", "Viewer"];
 
-const INITIAL_GROUPS: Group[] = [
-    { id: 1, name: "IT Support", description: "Handles internal IT helpdesk requests" },
-    { id: 2, name: "Network Team", description: "Manages network infrastructure and connectivity"},
-    { id: 3, name: "DBA Team", description: "Database administration and maintenance"},
-    { id: 4, name: "Facilities", description: "Physical infrastructure and hardware"},
-];
-
-const INITIAL_EMPLOYEES: Employee[] = [
-  { id: 1, name: "Andrei",   email: "andrei@sentrynet.io",   role: "Admin",    group: "IT Support" },
-  { id: 2, name: "Marcel",   email: "marcel@sentrynet.io",   role: "Operator", group: "Network Team" },
-  { id: 3, name: "Ioana",    email: "ioana@sentrynet.io",    role: "Operator", group: "IT Support" },
-  { id: 4, name: "Bogdan",   email: "bogdan@sentrynet.io",   role: "Viewer",   group: "DBA Team" },
-  { id: 5, name: "Cristina", email: "cristina@sentrynet.io", role: "Operator", group: "Network Team" },
-  { id: 6, name: "Stefan",   email: "stefan@sentrynet.io",   role: "Viewer",   group: "Facilities" },
-  { id: 7, name: "Ana",      email: "ana@sentrynet.io",      role: "Operator", group: "DBA Team" },
-  { id: 8, name: "Mihai",    email: "mihai@sentrynet.io",    role: "Operator", group: "IT Support" },
-];
-
 function roleBadgeClass(role: string) {
-    if(role === "Admin") return "role-badge role-badge-admin";
-    if(role === "Operator") return "role-badge role-badge-operator";
+    if (role === "Admin") return "role-badge role-badge-admin";
+    if (role === "Operator") return "role-badge role-badge-operator";
     return "role-badge role-badge-viewer";
 }
 
-function AddGroupModal({groups, onAdd, onClose}: {groups: Group[]; onAdd: (g: Group) => void; onClose: () => void}) {
+function AddGroupModal({ onClose }: { onClose: () => void }) {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
+    const createGroup = useCreateGroupMutation();
 
-    function handleSubmit(e: FormEvent) {
+    async function handleSubmit(e: FormEvent) {
         e.preventDefault();
-        if(!name.trim()) return;
-        onAdd({id: Math.max(0, ...groups.map((g) => g.id)) + 1, name: name.trim(), description: description.trim() });
+        if (!name.trim()) return;
+        const payload: CreateGroupPayload = { name: name.trim(), description: description.trim() };
+        await createGroup.mutateAsync(payload);
         onClose();
     }
+
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-card" onClick={(e) => e.stopPropagation()}>
@@ -50,7 +35,7 @@ function AddGroupModal({groups, onAdd, onClose}: {groups: Group[]; onAdd: (g: Gr
                 <form className="modal-form" onSubmit={handleSubmit}>
                     <div className="modal-field">
                         <label htmlFor="group-name">Name</label>
-                        <input id="group-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Security Team" required/>
+                        <input id="group-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Security Team" required />
                     </div>
                     <div className="modal-field">
                         <label htmlFor="group-desc">Description</label>
@@ -58,26 +43,31 @@ function AddGroupModal({groups, onAdd, onClose}: {groups: Group[]; onAdd: (g: Gr
                     </div>
                     <div className="modal-actions">
                         <button type="button" className="ghost-action" onClick={onClose}>Cancel</button>
-                        <button type="submit" className="table-action-link" disabled={!name.trim()}>Add Group</button>
+                        <button type="submit" className="table-action-link" disabled={!name.trim() || createGroup.isPending}>
+                            {createGroup.isPending ? "Adding..." : "Add Group"}
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
-    )
+    );
 }
 
-function AddEmployeeModal({groups, employees, onAdd, onClose}: {groups: Group[]; employees: Employee[]; onAdd: (e: Employee) => void; onClose: () => void}) {
+function AddEmployeeModal({ groups, onClose }: { groups: Group[]; onClose: () => void }) {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [role, setRole] = useState("Operator");
-    const [group, setGroup] = useState(groups[0]?.name ?? "");
+    const [groupId, setGroupId] = useState(groups[0]?.id ?? "");
+    const createEmployee = useCreateEmployeeMutation();
 
-    function handleSubmit(e: FormEvent) {
+    async function handleSubmit(e: FormEvent) {
         e.preventDefault();
-        if(!name.trim() || !email.trim()) return;
-        onAdd({id: Math.max(0, ...employees.map((e) => e.id)) + 1, name: name.trim(), email: email.trim(), role, group});
+        if (!name.trim() || !email.trim() || !groupId) return;
+        const payload: CreateEmployeePayload = { group_id: groupId, name: name.trim(), email: email.trim(), role };
+        await createEmployee.mutateAsync(payload);
         onClose();
     }
+
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-card" onClick={(e) => e.stopPropagation()}>
@@ -86,11 +76,11 @@ function AddEmployeeModal({groups, employees, onAdd, onClose}: {groups: Group[];
                 <form className="modal-form" onSubmit={handleSubmit}>
                     <div className="modal-field">
                         <label htmlFor="emp-name">Name</label>
-                        <input id="emp-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" required></input>
+                        <input id="emp-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" required />
                     </div>
                     <div className="modal-field">
                         <label htmlFor="emp-email">Email</label>
-                        <input id="emp-name" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@sentrynet.io" required />
+                        <input id="emp-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@sentrynet.io" required />
                     </div>
                     <div className="modal-field">
                         <label htmlFor="emp-role">Role</label>
@@ -100,13 +90,15 @@ function AddEmployeeModal({groups, employees, onAdd, onClose}: {groups: Group[];
                     </div>
                     <div className="modal-field">
                         <label htmlFor="emp-group">Group</label>
-                        <select id="emp-group" value={group} onChange={(e) => setGroup(e.target.value)}>
-                            {groups.map((g) => <option key={g.id} value={g.name}>{g.name}</option>)}    
-                        </select> 
+                        <select id="emp-group" value={groupId} onChange={(e) => setGroupId(e.target.value)}>
+                            {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                        </select>
                     </div>
                     <div className="modal-actions">
                         <button type="button" className="ghost-action" onClick={onClose}>Cancel</button>
-                        <button type="submit" className="table-action-link" disabled={!name.trim() || !email.trim()}>Add Employee</button>
+                        <button type="submit" className="table-action-link" disabled={!name.trim() || !email.trim() || createEmployee.isPending}>
+                            {createEmployee.isPending ? "Adding..." : "Add Employee"}
+                        </button>
                     </div>
                 </form>
             </div>
@@ -117,15 +109,17 @@ function AddEmployeeModal({groups, employees, onAdd, onClose}: {groups: Group[];
 function GroupsPage() {
     const overviewQuery = useDashboardOverview();
     const devicesQuery = useDevices();
+    const groupsQuery = useGroups();
+    const employeesQuery = useEmployees();
     const devices = devicesQuery.data ?? EMPTY_DEVICES;
+    const groups = groupsQuery.data ?? [];
+    const employees = employeesQuery.data ?? [];
     const isAdmin = getStoredRole().toLowerCase() === "admin";
-    
-    const [groups, setGroups] = useState<Group[]>(INITIAL_GROUPS);
-    const [employees, setEmployees] = useState<Employee[]>(INITIAL_EMPLOYEES);
+
     const [showAddGroup, setShowAddGroup] = useState(false);
     const [showAddEmp, setShowAddEmp] = useState(false);
 
-    const stats = buildDashboardStats({overview: overviewQuery.data, devices});
+    const stats = buildDashboardStats({ overview: overviewQuery.data, devices });
 
     return (
         <AppShell stats={stats} headerSlot={<span className="eyebrow">Groups & Employees</span>}>
@@ -151,7 +145,7 @@ function GroupsPage() {
                     <div className="groups-panel-header">
                         <div>
                             <span className="eyebrow">Groups</span>
-                            <h3 style={{margin: 0}}>All groups</h3>
+                            <h3 style={{ margin: 0 }}>All groups</h3>
                         </div>
                         {isAdmin && (
                             <button type="button" className="panel-add-btn" onClick={() => setShowAddGroup(true)}>
@@ -160,13 +154,14 @@ function GroupsPage() {
                         )}
                     </div>
                     <div className="groups-panel-body">
+                        {groupsQuery.isLoading && <p style={{ padding: "1rem" }}>Loading groups...</p>}
                         {groups.map((group) => {
-                            const count = employees.filter((e) => e.group === group.name).length;
+                            const count = employees.filter((e) => e.group_id === group.id).length;
                             return (
                                 <div key={group.id} className="group-card">
                                     <div className="group-card-row">
                                         <strong>{group.name}</strong>
-                                        <span className="group-member-badge">{count} {count === 1 ? "member" : "member"}</span>
+                                        <span className="group-member-badge">{count} {count === 1 ? "member" : "members"}</span>
                                     </div>
                                     {group.description && <p className="group-card-desc">{group.description}</p>}
                                 </div>
@@ -174,12 +169,12 @@ function GroupsPage() {
                         })}
                     </div>
                 </section>
-                
+
                 <section className="table-container">
                     <div className="groups-panel-header">
                         <div>
                             <span className="eyebrow">Employees</span>
-                            <h3 style={{margin: 0}}>All employees</h3>
+                            <h3 style={{ margin: 0 }}>All employees</h3>
                         </div>
                         {isAdmin && (
                             <button type="button" className="panel-add-btn" onClick={() => setShowAddEmp(true)}>
@@ -198,12 +193,15 @@ function GroupsPage() {
                                 </tr>
                             </thead>
                             <tbody>
+                                {employeesQuery.isLoading && (
+                                    <tr><td colSpan={4} style={{ textAlign: "center" }}>Loading...</td></tr>
+                                )}
                                 {employees.map((emp) => (
                                     <tr key={emp.id}>
                                         <td><strong>{emp.name}</strong></td>
                                         <td>{emp.email}</td>
                                         <td><span className={roleBadgeClass(emp.role)}>{emp.role}</span></td>
-                                        <td>{emp.group}</td>
+                                        <td>{emp.group?.name ?? emp.group_id}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -212,21 +210,8 @@ function GroupsPage() {
                 </section>
             </div>
 
-            {showAddGroup && (
-                <AddGroupModal
-                    groups={groups}
-                    onAdd={(g) => setGroups((prev) => [...prev, g])}
-                    onClose={() => setShowAddGroup(false)}
-                />
-            )}
-            {showAddEmp && (
-                <AddEmployeeModal
-                    groups={groups}
-                    employees={employees}
-                    onAdd={(e) => setEmployees((prev) => [...prev, e])}
-                    onClose={() => setShowAddEmp(false)}
-                />
-            )}
+            {showAddGroup && <AddGroupModal onClose={() => setShowAddGroup(false)} />}
+            {showAddEmp && <AddEmployeeModal groups={groups} onClose={() => setShowAddEmp(false)} />}
         </AppShell>
     );
 }

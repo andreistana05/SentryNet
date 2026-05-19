@@ -111,3 +111,18 @@ export const collectionEnvelopeSchema = <T extends z.ZodTypeAny>(itemSchema: T) 
     z.object({ data: z.array(itemSchema) }),
     z.object({ items: z.array(itemSchema) }),
   ]);
+
+export const groupSchema = z.object ({
+  id: z.string(),
+  name: z.string().catch(""),
+  description: z.string().catch(""),
+});
+
+export const employeeSchema = z.object({
+  id: z.string(),
+  name: z.string().catch(""),
+  email: z.string().catch(""),
+  role: z.string().catch(""),
+  group_id: z.string(),
+  group: groupSchema.optional(),
+});

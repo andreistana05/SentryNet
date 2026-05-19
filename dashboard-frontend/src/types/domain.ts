@@ -204,15 +204,28 @@ export interface GroupWorkloadDatum {
 }
 
 export interface Group {
-  id: number;
+  id: string
   name: string;
   description: string;
 }
 
 export interface Employee {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: string;
-  group: string;
+  group_id: string;
+  group?: Group;
+}
+
+export interface CreateGroupPayload {
+  name: string;
+  description: string;
+}
+
+export interface CreateEmployeePayload {
+  group_id: string;
+  name: string;
+  email: string;
+  role: string;
 }
