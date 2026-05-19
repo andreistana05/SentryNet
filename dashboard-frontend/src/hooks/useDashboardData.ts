@@ -15,6 +15,10 @@ import type {
   Ticket,
   TicketNote,
   TicketStatus,
+  Group,
+  Employee,
+  CreateEmployeePayload,
+  CreateGroupPayload,
 } from "../types/domain";
 import { loginUser, registerUser } from "../services/authService";
 import {
@@ -25,6 +29,10 @@ import {
   getTicketNotes,
   updateTicketStatus,
   createTicketNote,
+  getGroups,
+  createGroup,
+  getEmployees,
+  createEmployee,
 } from "../services/dashboardService";
 
 export function useDashboardOverview() {
@@ -217,4 +225,40 @@ export function useRegisterMutation() {
 
 export function getMutationErrorMessage(error: unknown, fallback: string): string {
   return getApiErrorMessage(error, fallback);
+}
+
+export function useGroups() {
+  return useQuery<Group[]>({
+    queryKey: ["groups"],
+    queryFn: getGroups,
+    staleTime: 60_000,
+  });
+}
+
+export function useCreateGroupMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateGroupPayload) => createGroup(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey: ["groups"]});
+    },
+  });
+}
+
+export function useEmployees(groupId?: string) {
+  return useQuery<Employee[]>({
+    queryKey: ["employees", groupId],
+    queryFn: () => getEmployees(groupId),
+    staleTime: 60_000,
+  });
+}
+
+export function useCreateEmployeeMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateEmployeePayload) => createEmployee(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey: ["employees"]});
+    },
+  });
 }

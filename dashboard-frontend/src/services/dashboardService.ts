@@ -9,6 +9,8 @@ import {
   problemSchema,
   ticketSchema,
   ticketNoteSchema,
+  groupSchema,
+  employeeSchema,
 } from "../lib/schemas";
 import type {
   Alarm,
@@ -23,6 +25,10 @@ import type {
   TicketNote,
   TicketStatus,
   UpdateTicketStatusPayload,
+  Group,
+  Employee,
+  CreateGroupPayload,
+  CreateEmployeePayload,
 } from "../types/domain";
 import { getValidated, patchValidated, postValidated } from "./api";
 
@@ -32,6 +38,8 @@ const incidentsEnvelopeSchema = collectionEnvelopeSchema(incidentSchema);
 const ticketsEnvelopeSchema = collectionEnvelopeSchema(ticketSchema);
 const problemsEnvelopeSchema = collectionEnvelopeSchema(problemSchema);
 const ticketNotesEnvelopeSchema = collectionEnvelopeSchema(ticketNoteSchema);
+const groupsEnvelopeSchema = collectionEnvelopeSchema(groupSchema);
+const employeesEnvelopeSchema = collectionEnvelopeSchema(employeeSchema);
 
 export const TICKET_STATUS_OPTIONS: TicketStatus[] = [
   "assigned",
@@ -98,4 +106,23 @@ export async function createTicketNote(
   payload: CreateTicketNotePayload,
 ): Promise<TicketNote> {
   return postValidated(`/tickets/${ticketId}/notes`, payload, ticketNoteSchema);
+}
+
+export async function getGroups(): Promise<Group[]> {
+  const payload = await getValidated("/groups", groupsEnvelopeSchema);
+  return extractCollection(payload);
+}
+
+export async function createGroup(payload: CreateGroupPayload): Promise<Group> {
+  return postValidated("/groups", payload, groupSchema);
+}
+
+export async function getEmployees(groupId?: string): Promise<Employee[]> {
+  const qs = groupId ? `?group_id=${groupId}` : "";
+  const payload = await getValidated(`/employees${qs}`, employeesEnvelopeSchema);
+  return extractCollection(payload);
+}
+
+export async function createEmployee(payload: CreateEmployeePayload): Promise<Employee> {
+  return postValidated("/employees", payload, employeeSchema);
 }
