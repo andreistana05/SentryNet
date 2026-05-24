@@ -91,8 +91,6 @@ export async function updateTicketStatus(
   ticketId: string | number,
   payload: UpdateTicketStatusPayload,
 ): Promise<Ticket> {
-  // This is the single backend integration point for inline ticket updates.
-  // If the API uses a different route or request body, update it here.
   return patchValidated(`/tickets/${ticketId}/status`, payload, ticketSchema);
 }
 

@@ -159,7 +159,7 @@ function ProfilePage() {
                 </section> 
 
                 {/*Security*/}
-                <section className="table-container">
+                <section className="table-container profile-security-section">
                     <div className="table-header">
                         <div>
                             <span className="eyebrow">Security</span>
