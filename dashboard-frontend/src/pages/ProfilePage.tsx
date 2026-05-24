@@ -97,7 +97,8 @@ function ProfilePage() {
     const [confirmPw, setConfirmPw] = useState("");
     const [pwSuccess, setPwSuccess] = useState(false);
     const [pwError, setPwError] = useState("");
-    const [systemUsers, setSystemUsers] = useState<typeof MOCK_SYSTEM_USERS>([]);
+    type UserRecord = { id: string; username: string; email: string; role: string };
+    const [systemUsers, setSystemUsers] = useState<UserRecord[]>([]);
     const [usersLoading, setUsersLoading] = useState(true);
     const [usersError, setUsersError] = useState("");
     const [pendingRoles, setPendingRoles] = useState<Record<string, string>>({});
@@ -107,7 +108,7 @@ function ProfilePage() {
             setUsersLoading(true);
             setUsersError("");
             try {
-                const response = await api.get("/users/");
+                const response = await api.get("/users");
                 setSystemUsers(response.data.data || []); 
             } catch (error) {
                 setUsersError(getApiErrorMessage(error, "Failed to load users."));
