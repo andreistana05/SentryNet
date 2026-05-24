@@ -3,6 +3,8 @@ import AppShell from "../components/AppShell";
 import { useDashboardOverview, useDevices } from "../hooks/useDashboardData";
 import { buildDashboardStats } from "../lib/dashboard";
 import { getStoredEmail, getStoredRole, getStoredUsername } from "../lib/storage";
+import api from "../services/api";
+import { getApiErrorMessage } from "../lib/apiError";
 
 const EMPTY_DEVICES: never[] = [];
 const ROLE_OPTIONS = ["Admin", "Operator", "Viewer"];
@@ -32,16 +34,28 @@ function roleBadgeClass(role: string) {
 function ConfirmIdentityModal({onConfirm, onClose}: {onConfirm: () => void; onClose: () => void}) {
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
 
-    function handleSubmit(e: FormEvent) {
+    async function handleSubmit(e: FormEvent) {
         e.preventDefault();
+        setError("");
+
         if(!password.trim()) {
             setError("Please enter your password.");
             return;
         }
-        // TODO: replace with POST /api/v1/auth/me/verify-password
-        onConfirm();
-        onClose();
+
+        setIsLoading(true);
+
+        try {
+            await api.post("/auth/me/verify-password", {password});
+            onConfirm();
+            onClose();
+        } catch (error) {
+            setError(getApiErrorMessage(error, "Unable to verify password. Please try again."));
+        } finally {
+            setIsLoading(false);
+        }
     }
     
     return (
@@ -58,7 +72,9 @@ function ConfirmIdentityModal({onConfirm, onClose}: {onConfirm: () => void; onCl
                     {error && <p className="modal-error">{error}</p>}
                     <div className="modal-actions">
                         <button type="button" className="ghost-action" onClick={onClose}>Cancel</button>
-                        <button type="submit" className="table-action-link">Confirm</button>
+                        <button type="submit" className="table-action-link" disabled={isLoading}>
+                            {isLoading ? "Verifying..." : "Confirm"}
+                        </button>
                     </div>
                 </form>
             </div>
@@ -88,25 +104,46 @@ function ProfilePage() {
 
     const stats = buildDashboardStats({overview: overviewQuery.data, devices});
     
-    function handlePasswordSubmit(e: FormEvent) {
+    async function handlePasswordSubmit(e: FormEvent) {
         e.preventDefault();
         setPwError("");
-        if(newPassword.length < 8) {setPwError("Password must be at least 8 characters long."); return;}
-        if(newPassword != confirmPw ) {setPwError("Passwords don't match."); return;}
-        //TODO: call PUT /api/v1/auth/me with {password: newPassword}
-        setPwSuccess(true);
-        setNewPassword("");
-        setConfirmPw("");
+        if(newPassword.length < 8) {
+            setPwError("Password must be at least 8 characters long.");
+            return;
+        }
+
+        if(newPassword !== confirmPw) {
+            setPwError("Passwords don't match.");
+            return;
+        }
+        try {
+            await api.put("/auth/me", {password: newPassword });
+            setPwSuccess(true);
+            setNewPassword("");
+            setConfirmPw("");
+        } catch (error) {
+            setPwError(getApiErrorMessage(error, "Could not change password. Please try again."));
+        }
     }
 
-    function handleRoleSave(userId: string) {
+    async function handleRoleSave(userId: string) {
         const newRole = pendingRoles[userId];
         if(!newRole) return;
-        //TODO: call PATCH /api/v1/users/:id/role with {role: newRole}
-        setSystemUsers((prev) => prev.map((u) => (u.id === userId ? {...u, role: newRole}: u)))
-        setPendingRoles((prev) => { const next = {...prev}; delete next[userId]; return next;})
-    }
 
+        try {
+            await api.patch(`/users/${userId}/role`, {role: newRole});
+            setSystemUsers((prev) => 
+                prev.map((u) => (u.id === userId ? {...u, role: newRole} : u))
+            );
+            setPendingRoles((prev) => {
+                const next = {...prev};
+                delete next[userId];
+                return next;
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    }
     const displayRole = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase(); 
 
     return (
