@@ -15,6 +15,8 @@ type UserRepository interface {
 	Create(user *models.User) error
 	FindByEmail(email string) (*models.User, error)
 	FindByID(id uuid.UUID) (*models.User, error)
+	List() ([]*models.User, error)
+    Update(user *models.User) error 
 }
 
 // DeviceFilter holds optional filters for listing devices.

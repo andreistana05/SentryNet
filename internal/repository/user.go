@@ -50,3 +50,34 @@ func (r *userRepository) FindByID(ID uuid.UUID) (*models.User, error) {
 	}
 	return &u, err
 }
+
+func (r *userRepository) List() ([]*models.User, error) {
+    rows, err := r.db.Query(
+        `SELECT id, username, email, password_hash, role, created_at, updated_at
+         FROM users ORDER BY created_at ASC`,
+    )
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    var users []*models.User
+    for rows.Next() {
+        var u models.User
+        if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role, &u.CreatedAt, &u.UpdatedAt); err != nil {
+            return nil, err
+        }
+        users = append(users, &u)
+    }
+    return users, rows.Err()
+}
+
+func (r *userRepository) Update(user *models.User) error {
+    user.UpdatedAt = time.Now()
+    _, err := r.db.Exec(
+        `UPDATE users SET username=$1, email=$2, password_hash=$3, role=$4, updated_at=$5
+         WHERE id=$6`,
+        user.Username, user.Email, user.PasswordHash, user.Role, user.UpdatedAt, user.ID,
+    )
+    return err
+}
