@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import AppShell from "../components/AppShell";
 import { useDashboardOverview, useDevices } from "../hooks/useDashboardData";
 import { buildDashboardStats } from "../lib/dashboard";
@@ -97,10 +97,29 @@ function ProfilePage() {
     const [confirmPw, setConfirmPw] = useState("");
     const [pwSuccess, setPwSuccess] = useState(false);
     const [pwError, setPwError] = useState("");
-
-    //Replace with API data from GET /api/v1/users when backend is ready
-    const [systemUsers, setSystemUsers] = useState(MOCK_SYSTEM_USERS);
+    const [systemUsers, setSystemUsers] = useState<typeof MOCK_SYSTEM_USERS>([]);
+    const [usersLoading, setUsersLoading] = useState(true);
+    const [usersError, setUsersError] = useState("");
     const [pendingRoles, setPendingRoles] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        async function fetchUsers() {
+            setUsersLoading(true);
+            setUsersError("");
+            try {
+                const response = await api.get("/users/");
+                setSystemUsers(response.data.data || []); 
+            } catch (error) {
+                setUsersError(getApiErrorMessage(error, "Failed to load users."));
+                setSystemUsers([])
+            } finally {
+                setUsersLoading(false);
+            }
+        }
+        fetchUsers();
+    }, []);
+
+    
 
     const stats = buildDashboardStats({overview: overviewQuery.data, devices});
     
@@ -245,6 +264,8 @@ function ProfilePage() {
                                 <span>users</span>
                             </div>
                         </div>
+                        {usersLoading && <p className = "loading-text">Loading users...</p>}
+                        {usersError && <p className="modal-error">{usersError}</p>}
                         <div className="table-scroll">
                             <table className="devices-table">
                                 <thead>
