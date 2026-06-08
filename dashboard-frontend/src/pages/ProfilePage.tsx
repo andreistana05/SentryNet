@@ -5,6 +5,7 @@ import { buildDashboardStats } from "../lib/dashboard";
 import { getStoredEmail, getStoredRole, getStoredUsername } from "../lib/storage";
 import api from "../services/api";
 import { getApiErrorMessage } from "../lib/apiError";
+import CustomSelect from "../components/CustomSelect";
 
 const EMPTY_DEVICES: never[] = [];
 const ROLE_OPTIONS = ["Admin", "Operator", "Viewer"];
@@ -31,8 +32,9 @@ function roleBadgeClass(role: string) {
     return "role-badge role-badge-viewer";
 }
 
-function ConfirmIdentityModal({onConfirm, onClose}: {onConfirm: () => void; onClose: () => void}) {
-    const [password, setPassword] = useState("");
+function ResetPasswordModal({onClose, onSuccess}: {onClose: () => void; onSuccess: () => void}) {
+    const [currentPassword, setCurrentPassword] = useState("");
+    const [newPassword, setNewPassword] = useState("");
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
@@ -40,40 +42,51 @@ function ConfirmIdentityModal({onConfirm, onClose}: {onConfirm: () => void; onCl
         e.preventDefault();
         setError("");
 
-        if(!password.trim()) {
-            setError("Please enter your password.");
+        if (!currentPassword.trim()) {
+            setError("Please enter your current password.");
+            return;
+        }
+
+        if (newPassword.length < 8) {
+            setError("Password must be at least 8 characters long.");
             return;
         }
 
         setIsLoading(true);
 
         try {
-            await api.post("/auth/me/verify-password", {password});
-            onConfirm();
+            await api.post("/auth/me/verify-password", { password: currentPassword });
+            await api.put("/auth/me", { password: newPassword });
+            onSuccess();
             onClose();
         } catch (error) {
-            setError(getApiErrorMessage(error, "Unable to verify password. Please try again."));
+            setError(getApiErrorMessage(error, "Unable to update password. Please try again."));
         } finally {
             setIsLoading(false);
         }
     }
-    
+
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+                <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close">×</button>
                 <span className="eyebrow">Security</span>
-                <h3>Confirm your identity</h3>
-                <p className="modal-subtitle">Enter your current password to access security settings.</p>
+                <h3>Forgot your password?</h3>
+                <p className="modal-subtitle">Confirm your current password and choose a new one.</p>
                 <form className="modal-form" onSubmit={handleSubmit}>
                     <div className="modal-field">
-                        <label htmlFor="confirm-password">Current password</label>
-                        <input id="confirm-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" autoFocus />
+                        <label htmlFor="current-password">Current password</label>
+                        <input id="current-password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Enter current password" autoFocus />
+                    </div>
+                    <div className="modal-field">
+                        <label htmlFor="new-password">New password</label>
+                        <input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Enter new password" />
                     </div>
                     {error && <p className="modal-error">{error}</p>}
                     <div className="modal-actions">
                         <button type="button" className="ghost-action" onClick={onClose}>Cancel</button>
                         <button type="submit" className="table-action-link" disabled={isLoading}>
-                            {isLoading ? "Verifying..." : "Confirm"}
+                            {isLoading ? "Saving..." : "Save password"}
                         </button>
                     </div>
                 </form>
@@ -91,12 +104,8 @@ function ProfilePage() {
     const role = getStoredRole();
     const isAdmin = role.toLowerCase() === "admin";
 
-    const [showConfirm, setShowConfirm] = useState(false);
-    const [isVerified, setIsVerified] = useState(false);
-    const [newPassword, setNewPassword] = useState("");
-    const [confirmPw, setConfirmPw] = useState("");
+    const [showResetModal, setShowResetModal] = useState(false);
     const [pwSuccess, setPwSuccess] = useState(false);
-    const [pwError, setPwError] = useState("");
     type UserRecord = { id: string; username: string; email: string; role: string };
     const [systemUsers, setSystemUsers] = useState<UserRecord[]>([]);
     const [usersLoading, setUsersLoading] = useState(true);
@@ -124,28 +133,6 @@ function ProfilePage() {
 
     const stats = buildDashboardStats({overview: overviewQuery.data, devices});
     
-    async function handlePasswordSubmit(e: FormEvent) {
-        e.preventDefault();
-        setPwError("");
-        if(newPassword.length < 8) {
-            setPwError("Password must be at least 8 characters long.");
-            return;
-        }
-
-        if(newPassword !== confirmPw) {
-            setPwError("Passwords don't match.");
-            return;
-        }
-        try {
-            await api.put("/auth/me", {password: newPassword });
-            setPwSuccess(true);
-            setNewPassword("");
-            setConfirmPw("");
-        } catch (error) {
-            setPwError(getApiErrorMessage(error, "Could not change password. Please try again."));
-        }
-    }
-
     async function handleRoleSave(userId: string) {
         const newRole = pendingRoles[userId];
         if(!newRole) return;
@@ -193,6 +180,21 @@ function ProfilePage() {
             </section>
 
             <div className="profile-body">
+                {/*Security*/}
+                <section className="table-container profile-security-section">
+                    <div className="table-header">
+                        <div>
+                            <span className="eyebrow">Security</span>
+                            <h3>Change Password</h3>
+                        </div>
+                    </div>
+                    <div className="security-locked">
+                        {pwSuccess && <p className="form-success">Password changed successfully.</p>}
+                        <button type="button" className="panel-add-btn" onClick={() => { setShowResetModal(true); setPwSuccess(false); }}>
+                            Forgot your password? Confirm your identity and change it
+                        </button>
+                    </div>
+                </section>
                 {/* Profile card */}
                 <section className="table-container profile-card-section">
                     <div className="profile-card-body">
@@ -214,44 +216,7 @@ function ProfilePage() {
                         </div>
                     </div>
                 </section> 
-
-                {/*Security*/}
-                <section className="table-container profile-security-section">
-                    <div className="table-header">
-                        <div>
-                            <span className="eyebrow">Security</span>
-                            <h3>Change Password</h3>
-                        </div>
-                    </div>
-                    {!isVerified ? (
-                        <div className="security-locked">
-                            <div className="security-lock-icon">🔒</div>
-                            <p className="security-lock-text">Confirm your identity before changing your password.</p>
-                            <button type="button" className="panel-add-btn" onClick={() => setShowConfirm(true)}>
-                                Confirm Identity.
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="security-unlocked">
-                            {pwSuccess && <p className="form-success">Password changed successfully.</p>}
-                            <form className="modal-form" onSubmit={handlePasswordSubmit}>
-                                <div className="modal-field">
-                                    <label htmlFor="new-pw">New password</label>
-                                    <input id="new-pw" type="password" value={newPassword} onChange={(e) => {setNewPassword(e.target.value); setPwSuccess(false);}} placeholder="At least 8 characters long." />
-                                </div>
-                                <div className="modal-field">
-                                    <label htmlFor="confirm-pw">Confirm new password.</label>
-                                    <input id="confirm-pw" type="password" value={confirmPw} onChange={(e) => {setConfirmPw(e.target.value); setPwSuccess(false);}} placeholder="Repeat new password" />
-                                </div>
-                                {pwError && <p className="modal-error">{pwError}</p>}
-                                <div className="modal-actions">
-                                    <button type="submit" className="table-action-link">Change Password</button>
-                                </div>
-                            </form>
-                        </div>
-                    )} 
-                </section>
-
+                
                 {/*Admin: user management*/}
                 {isAdmin && (
                     <section className="table-container profile-users">
@@ -288,13 +253,13 @@ function ProfilePage() {
                                                 <td>{user.email}</td>
                                                 <td><span className={roleBadgeClass(user.role)}>{user.role}</span></td>
                                                 <td>
-                                                    <select
-                                                        className="role-select"
-                                                        value={pending}
-                                                        onChange={(e) => setPendingRoles((prev) => ({...prev, [user.id]: e.target.value}))}
-                                                        >
-                                                            {ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
-                                                        </select>
+                                                    <div className="profile-role-select">
+                                                        <CustomSelect
+                                                            value={pending}
+                                                            options={ROLE_OPTIONS.map((r) => ({ value: r, label: r }))}
+                                                            onChange={(value) => setPendingRoles((prev) => ({...prev, [user.id]: value}))}
+                                                        />
+                                                    </div>
                                                 </td>
                                                 <td>
                                                     <button type="button" className="save-role-btn" disabled={!isDirty} onClick={() => handleRoleSave(user.id)}>
@@ -311,8 +276,8 @@ function ProfilePage() {
                 )}
             </div>
 
-            {showConfirm && (
-                <ConfirmIdentityModal onConfirm={() => setIsVerified(true)} onClose={() => setShowConfirm(false)} />
+            {showResetModal && (
+                <ResetPasswordModal onSuccess={() => setPwSuccess(true)} onClose={() => setShowResetModal(false)} />
             )}
         </AppShell>
     );
