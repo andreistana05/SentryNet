@@ -19,6 +19,8 @@ const EMPTY_PROBLEMS: Problem[] = [];
 
 function Dashboard() {
   const [filters, setFilters] = useState({ status: "all", type: "all", query: "" });
+  const [isInventoryOpen, setIsInventoryOpen] = useState(true);
+  const [areWorkQueuesOpen, setAreWorkQueuesOpen] = useState(true);
   const [timeNow] = useState(() => Date.now());
 
   const overviewQuery = useDashboardOverview();
@@ -167,7 +169,7 @@ function Dashboard() {
                 <span>Search</span>
                 <input
                   type="search"
-                  placeholder="Name, IP, type, status..."
+                  placeholder="Search devices by name, IP, type, status..."
                   value={filters.query}
                   onChange={(e) => updateFilter("query", e.target.value)}
                 />
@@ -193,22 +195,53 @@ function Dashboard() {
             </div>
           </section>
 
-          <DeviceTable
-            devices={tableDevices}
-            loading={isLoading}
-            error={dataError}
-            totalDevices={stats.totalDevices}
-            filteredCount={stats.filtered}
-          />
-          <div className="col-charts">
-            <FleetStatusChart data={fleetStatus} loading={isLoading} />
-            <OperationsWorkloadChart data ={operationsWorkload} loading={isLoading} />
+          <div className="dashboard-section-actions">
+            <button
+              type="button"
+              className="dashboard-collapse-toggle"
+              aria-expanded={isInventoryOpen}
+              aria-controls="live-inventory-panel"
+              aria-label={`${isInventoryOpen ? "Collapse" : "Expand"} live inventory`}
+              onClick={() => setIsInventoryOpen((current) => !current)}
+            >
+              <span>{isInventoryOpen ? "Collapse" : "Expand"}</span>
+              <span className={`dashboard-collapse-chevron${isInventoryOpen ? " is-open" : ""}`} aria-hidden="true" />
+            </button>
+          </div>
+
+          <div id="live-inventory-panel" hidden={!isInventoryOpen}>
+            <DeviceTable
+              devices={tableDevices}
+              loading={isLoading}
+              error={dataError}
+              totalDevices={stats.totalDevices}
+              filteredCount={stats.filtered}
+            />
+            <div className="col-charts">
+              <FleetStatusChart data={fleetStatus} loading={isLoading} />
+              <OperationsWorkloadChart data={operationsWorkload} loading={isLoading} />
+            </div>
           </div>
         </div>
 
         <div className="col col-right">
-          {queueGroups.map(({ key, label, items }) => (
-            <section key={key} className="panel">
+          <div className="dashboard-section-actions">
+            <button
+              type="button"
+              className="dashboard-collapse-toggle"
+              aria-expanded={areWorkQueuesOpen}
+              aria-controls="live-work-queues-panel"
+              aria-label={`${areWorkQueuesOpen ? "Collapse" : "Expand"} live work queues`}
+              onClick={() => setAreWorkQueuesOpen((current) => !current)}
+            >
+              <span>{areWorkQueuesOpen ? "Collapse" : "Expand"}</span>
+              <span className={`dashboard-collapse-chevron${areWorkQueuesOpen ? " is-open" : ""}`} aria-hidden="true" />
+            </button>
+          </div>
+
+          <div id="live-work-queues-panel" className="work-queues-stack" hidden={!areWorkQueuesOpen}>
+            {queueGroups.map(({ key, label, items }) => (
+              <section key={key} className="panel">
               <div className="panel-head">
                 <div>
                   <span className="eyebrow">{label}</span>
@@ -244,7 +277,8 @@ function Dashboard() {
                 )}
               </div>
             </section>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </AppShell>

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getApiErrorMessage } from "../lib/apiError";
-import { clearStoredAuth, getStoredUsername, setStoredRole, setStoredToken, setStoredUsername, getStoredEmail, setStoredEmail } from "../lib/storage";
+import { clearStoredAuth, getStoredUsername, setStoredRole, setStoredToken, setStoredUsername, setStoredEmail } from "../lib/storage";
 import type {
   Alarm,
   CreateTicketNotePayload,

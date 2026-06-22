@@ -347,7 +347,7 @@ function OperationsPage({ type }: { type: OperationType }) {
   const itemsQuery = useOperations(type);
   const updateTicketStatusMutation = useUpdateTicketStatusMutation();
   const devices = devicesQuery.data ?? EMPTY_DEVICES;
-  const items = itemsQuery.data ?? [];
+  const items = useMemo(() => itemsQuery.data ?? [], [itemsQuery.data]);
   const priorityChartData = useMemo(
   () => buildAlarmPriority(items),
   [items],

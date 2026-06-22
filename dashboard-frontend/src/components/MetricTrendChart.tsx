@@ -1,5 +1,5 @@
 import { Activity } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatMetricValue } from "../lib/formatters";
 import type { MetricTrendViewModel } from "../types/domain";
@@ -51,16 +51,14 @@ function formatTooltipTime(label: string | number, range: MetricTrendRange, hasH
 function MetricTrendChart({ data, loading, range, onRangeChange }: MetricTrendChartProps) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
-  useEffect(() => {
-    setSelectedKey((current) => {
-      const availableKeys = data.series.map((entry) => entry.key);
-      return current && availableKeys.includes(current) ? current : availableKeys[0] ?? null;
-    });
-  }, [data.series]);
+  const activeSelectedKey = useMemo(() => {
+    const availableKeys = data.series.map((entry) => entry.key);
+    return selectedKey && availableKeys.includes(selectedKey) ? selectedKey : availableKeys[0] ?? null;
+  }, [data.series, selectedKey]);
 
   const selectedSeries = useMemo(
-    () => data.series.find((entry) => entry.key === selectedKey) ?? data.series[0] ?? null,
-    [data.series, selectedKey],
+    () => data.series.find((entry) => entry.key === activeSelectedKey) ?? data.series[0] ?? null,
+    [activeSelectedKey, data.series],
   );
 
   const visiblePoints = useMemo(() => {
