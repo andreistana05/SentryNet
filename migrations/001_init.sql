@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS metrics (
     device_id  UUID        NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
     type       VARCHAR(50) NOT NULL,
     value      DOUBLE PRECISION NOT NULL,
-    unit       VARCHAR(20),
+    unit       VARCHAR(255),
     timestamp  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

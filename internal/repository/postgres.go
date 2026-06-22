@@ -88,7 +88,7 @@ func Migrate(db *sql.DB) error {
 			device_id	UUID		NOT NULL REFERENCES devices(id),
 			type		VARCHAR(50)	NOT NULL,
 			value		FLOAT8		NOT NULL,
-			unit		VARCHAR(64),
+			unit		VARCHAR(255),
 			timestamp	TIMESTAMPTZ	NOT NULL
 		);
 		CREATE TABLE IF NOT EXISTS metric_aggregates (
@@ -99,7 +99,7 @@ func Migrate(db *sql.DB) error {
 			min_value		FLOAT8		NOT NULL,
 			max_value		FLOAT8		NOT NULL,
 			sample_count	INT			NOT NULL,
-			unit			VARCHAR(64),
+			unit			VARCHAR(255),
 			period_start	TIMESTAMPTZ	NOT NULL,
 			period_end		TIMESTAMPTZ	NOT NULL,
 			created_at		TIMESTAMPTZ	NOT NULL DEFAULT NOW(),
@@ -197,6 +197,9 @@ func Migrate(db *sql.DB) error {
 			assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			PRIMARY KEY (ticket_id, employee_id)
 		);
+
+		ALTER TABLE metrics ALTER COLUMN unit TYPE VARCHAR(255);
+		ALTER TABLE metric_aggregates ALTER COLUMN unit TYPE VARCHAR(255);
 	`)
 	return err
 }
