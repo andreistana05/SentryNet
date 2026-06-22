@@ -19,8 +19,6 @@ const EMPTY_PROBLEMS: Problem[] = [];
 
 function Dashboard() {
   const [filters, setFilters] = useState({ status: "all", type: "all", query: "" });
-  const [isInventoryOpen, setIsInventoryOpen] = useState(true);
-  const [areWorkQueuesOpen, setAreWorkQueuesOpen] = useState(true);
   const [timeNow] = useState(() => Date.now());
 
   const overviewQuery = useDashboardOverview();
@@ -195,21 +193,7 @@ function Dashboard() {
             </div>
           </section>
 
-          <div className="dashboard-section-actions">
-            <button
-              type="button"
-              className="dashboard-collapse-toggle"
-              aria-expanded={isInventoryOpen}
-              aria-controls="live-inventory-panel"
-              aria-label={`${isInventoryOpen ? "Collapse" : "Expand"} live inventory`}
-              onClick={() => setIsInventoryOpen((current) => !current)}
-            >
-              <span>{isInventoryOpen ? "Collapse" : "Expand"}</span>
-              <span className={`dashboard-collapse-chevron${isInventoryOpen ? " is-open" : ""}`} aria-hidden="true" />
-            </button>
-          </div>
-
-          <div id="live-inventory-panel" hidden={!isInventoryOpen}>
+          <div id="live-inventory-panel">
             <DeviceTable
               devices={tableDevices}
               loading={isLoading}
@@ -225,21 +209,7 @@ function Dashboard() {
         </div>
 
         <div className="col col-right">
-          <div className="dashboard-section-actions">
-            <button
-              type="button"
-              className="dashboard-collapse-toggle"
-              aria-expanded={areWorkQueuesOpen}
-              aria-controls="live-work-queues-panel"
-              aria-label={`${areWorkQueuesOpen ? "Collapse" : "Expand"} live work queues`}
-              onClick={() => setAreWorkQueuesOpen((current) => !current)}
-            >
-              <span>{areWorkQueuesOpen ? "Collapse" : "Expand"}</span>
-              <span className={`dashboard-collapse-chevron${areWorkQueuesOpen ? " is-open" : ""}`} aria-hidden="true" />
-            </button>
-          </div>
-
-          <div id="live-work-queues-panel" className="work-queues-stack" hidden={!areWorkQueuesOpen}>
+          <div id="live-work-queues-panel" className="work-queues-stack">
             {queueGroups.map(({ key, label, items }) => (
               <section key={key} className="panel">
               <div className="panel-head">
