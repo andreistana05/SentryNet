@@ -28,7 +28,7 @@ def log(msg):
 def main():
     """Load the effective config, discover device identity, then send data forever."""
     config = load_config()
-    device_info = get_device_info()
+    device_info = get_device_info(config)
 
     base_url = config["base_url"]
     api_key = config["api_key"]

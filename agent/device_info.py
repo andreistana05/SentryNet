@@ -205,8 +205,9 @@ def detect_linux_device_type():
 def get_device_type(config=None):
     # Optional override is useful for edge cases like headless workstations or
     # lightweight servers that the heuristics would misclassify.
-    if config and config.get("device_type_override") in {"server", "workstation"}:
-        return config["device_type_override"]
+    override = (config or {}).get("device_type_override")
+    if override in {"server", "workstation"}:
+        return override
 
     system = platform.system().lower()
 
@@ -218,11 +219,11 @@ def get_device_type(config=None):
 
     return "workstation"
 
-def get_device_info():
+def get_device_info(config=None):
     # The backend keys devices primarily by hostname/IP/type, so keep this
     # payload small and stable across metric/heartbeat submissions.
     return {
         "hostname": socket.gethostname(),
         "ip_address": get_ip_address(),
-        "device_type": get_device_type()
+        "device_type": get_device_type(config)
     }

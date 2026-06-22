@@ -34,6 +34,7 @@ class AgentControlPanel(tk.Tk):
         self.metrics_interval = tk.IntVar()
         self.heartbeat_interval = tk.IntVar()
         self.timeout = tk.IntVar()
+        self.device_type_override = tk.StringVar()
         self.status = tk.StringVar(value="Stopped")
         self.config_path = tk.StringVar(value=str(CONFIG_PATH))
 
@@ -55,6 +56,7 @@ class AgentControlPanel(tk.Tk):
         self.metrics_interval.set(config["metrics_interval"])
         self.heartbeat_interval.set(config["heartbeat_interval"])
         self.timeout.set(config["timeout"])
+        self.device_type_override.set(config.get("device_type_override", "auto"))
 
     def _build_ui(self):
         self.columnconfigure(0, weight=1)
@@ -94,23 +96,32 @@ class AgentControlPanel(tk.Tk):
             ("Metrics Interval", self.metrics_interval),
             ("Heartbeat Interval", self.heartbeat_interval),
             ("Request Timeout", self.timeout),
+            ("Device Type", self.device_type_override),
         ]
 
         for row, (label, variable) in enumerate(fields):
             ttk.Label(parent, text=label).grid(row=row, column=0, sticky="w", pady=7)
             if isinstance(variable, tk.IntVar):
                 entry = ttk.Spinbox(parent, from_=1, to=3600, textvariable=variable, width=12)
+            elif label == "Device Type":
+                entry = ttk.Combobox(
+                    parent,
+                    textvariable=variable,
+                    values=("auto", "server", "workstation"),
+                    state="readonly",
+                    width=18,
+                )
             else:
                 entry = ttk.Entry(parent, textvariable=variable, show="*" if "Key" in label else "")
             entry.grid(row=row, column=1, sticky="ew", padx=(14, 0), pady=7)
 
-        ttk.Label(parent, text="Config File").grid(row=5, column=0, sticky="w", pady=7)
+        ttk.Label(parent, text="Config File").grid(row=6, column=0, sticky="w", pady=7)
         ttk.Entry(parent, textvariable=self.config_path, state="readonly").grid(
-            row=5, column=1, sticky="ew", padx=(14, 0), pady=7
+            row=6, column=1, sticky="ew", padx=(14, 0), pady=7
         )
 
         actions = ttk.Frame(parent)
-        actions.grid(row=6, column=0, columnspan=2, sticky="ew", pady=(18, 0))
+        actions.grid(row=7, column=0, columnspan=2, sticky="ew", pady=(18, 0))
         actions.columnconfigure(3, weight=1)
 
         ttk.Button(actions, text="Save", command=self.save_settings).grid(row=0, column=0, padx=(0, 8))
@@ -121,7 +132,7 @@ class AgentControlPanel(tk.Tk):
         parent.columnconfigure(0, weight=1)
         parent.rowconfigure(2, weight=1)
 
-        device = get_device_info()
+        device = get_device_info(load_config())
         device_text = (
             f"Hostname: {device['hostname']}\n"
             f"IP Address: {device['ip_address']}\n"
@@ -168,6 +179,7 @@ class AgentControlPanel(tk.Tk):
             "metrics_interval": self.metrics_interval.get(),
             "heartbeat_interval": self.heartbeat_interval.get(),
             "timeout": self.timeout.get(),
+            "device_type_override": self.device_type_override.get(),
         }
 
     def save_settings(self):

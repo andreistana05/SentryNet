@@ -12,10 +12,11 @@ import os
 from pathlib import Path
 
 DEFAULT_BACKEND_URL = "http://127.0.0.1:8080"
-DEFAULT_INGEST_API_KEY = "sk-infrapulse-7f3Kx9mQpL2wNvR8dYcT4jZbHnUeA6sW"
+DEFAULT_INGEST_API_KEY = "change-me-ingest-key"
 DEFAULT_METRICS_INTERVAL = 10
 DEFAULT_HEARTBEAT_INTERVAL = 30
 DEFAULT_TIMEOUT = 5
+DEVICE_TYPE_OPTIONS = {"auto", "server", "workstation"}
 
 CONFIG_PATH = Path(__file__).with_name("config.json")
 
@@ -36,12 +37,17 @@ def _read_file_config():
 
 def save_config(settings):
     """Persist the editable runtime settings to config.json."""
+    device_type_override = settings.get("device_type_override", "auto")
+    if device_type_override not in DEVICE_TYPE_OPTIONS:
+        device_type_override = "auto"
+
     file_settings = {
         "backend_url": settings["backend_url"].strip().rstrip("/"),
         "api_key": settings["api_key"].strip(),
         "metrics_interval": int(settings["metrics_interval"]),
         "heartbeat_interval": int(settings["heartbeat_interval"]),
         "timeout": int(settings["timeout"]),
+        "device_type_override": device_type_override,
     }
 
     with CONFIG_PATH.open("w", encoding="utf-8") as f:
@@ -60,6 +66,13 @@ def load_config():
         "BACKEND_URL",
         file_config.get("backend_url", DEFAULT_BACKEND_URL),
     )
+    device_type_override = os.getenv(
+        "DEVICE_TYPE_OVERRIDE",
+        file_config.get("device_type_override", "auto"),
+    )
+    if device_type_override not in DEVICE_TYPE_OPTIONS:
+        device_type_override = "auto"
+
     return {
         "backend_url": backend_url.rstrip("/"),
         "base_url": backend_url.rstrip("/") + "/api/v1/ingest",
@@ -79,4 +92,5 @@ def load_config():
             "TIMEOUT",
             str(file_config.get("timeout", DEFAULT_TIMEOUT)),
         )),
+        "device_type_override": device_type_override,
     }

@@ -25,7 +25,7 @@ from snmp_collector import collect_snmp_metrics
 # ---- Configuration ----
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
-API_KEY = os.getenv("INGEST_API_KEY", "sk-infrapulse-7f3Kx9mQpL2wNvR8dYcT4jZbHnUeA6sW")
+API_KEY = os.getenv("INGEST_API_KEY", "change-me-ingest-key")
 INTERVAL = int(os.getenv("MONITOR_INTERVAL", "30"))           # seconds between polling cycles
 OFFLINE_THRESHOLD = int(os.getenv("OFFLINE_THRESHOLD", "3"))  # consecutive failures before marking offline
 PING_COUNT = int(os.getenv("PING_COUNT", "1"))
