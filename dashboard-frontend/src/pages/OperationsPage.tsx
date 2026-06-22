@@ -200,6 +200,12 @@ function TicketNotesComposer({
         return;
       }
 
+      // If the trigger button has scrolled off the top of the screen, close the popup
+      if (rect.top < 0) {
+        onToggle();
+        return;
+      }
+
       setMenuPosition({
         left: Math.max(16, rect.right - Math.max(rect.width, 360)),
         bottom: window.innerHeight - rect.top + 10,

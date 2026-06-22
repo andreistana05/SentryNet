@@ -1,7 +1,10 @@
 .metric-trend-panel {
   --chart-threshold: rgba(251, 113, 133, 0.72);
   --chart-threshold-text: var(--rose);
+  display: grid;
+  grid-template-rows: auto minmax(300px, 1fr);
   min-height: 0;
+  flex: 1;
 }
 
 .metric-trend-layout {
@@ -9,10 +12,12 @@
   grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
   gap: 1rem;
   align-items: stretch;
+  min-height: 0;
 }
 
 .metric-trend-canvas {
   min-height: 0;
+  height: 100%;
 }
 
 .metric-trend-actions {
