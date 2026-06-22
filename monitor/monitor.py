@@ -34,6 +34,31 @@ _raw_range = os.getenv("NETWORK_RANGE", "")
 NETWORK_RANGES = [r.strip() for r in _raw_range.split(",") if r.strip()]
 DISCOVERY_INTERVAL = int(os.getenv("DISCOVERY_INTERVAL", "300"))  # re-scan every 5 min
 DISCOVERY_WORKERS = int(os.getenv("DISCOVERY_WORKERS", "50"))      # parallel ping workers
+ACCEPTED_DEVICE_TYPES = {
+    value.strip().lower()
+    for value in os.getenv("ACCEPTED_DEVICE_TYPES", "router,switch,printer,server").split(",")
+    if value.strip()
+}
+SERVER_EVIDENCE_PORTS = {
+    int(value.strip())
+    for value in os.getenv("SERVER_EVIDENCE_PORTS", "22,5432,3306,1433,1521,6379,8080,8443").split(",")
+    if value.strip().isdigit()
+}
+SERVER_HOSTNAME_PREFIXES = tuple(
+    value.strip().lower()
+    for value in os.getenv("SERVER_HOSTNAME_PREFIXES", "app-,db-,backup-,srv-,server-,web-").split(",")
+    if value.strip()
+)
+SWITCH_HOSTNAME_PREFIXES = tuple(
+    value.strip().lower()
+    for value in os.getenv("SWITCH_HOSTNAME_PREFIXES", "sw-,switch-,dist-,access-").split(",")
+    if value.strip()
+)
+ROUTER_HOSTNAME_PREFIXES = tuple(
+    value.strip().lower()
+    for value in os.getenv("ROUTER_HOSTNAME_PREFIXES", "rt-,router-,core-").split(",")
+    if value.strip()
+)
 
 # Comma-separated CIDR ranges to exclude from monitoring (e.g. Docker bridge networks).
 # Defaults to the Docker bridge range so container IPs are never registered as devices.
@@ -97,7 +122,7 @@ def resolve_hostname(ip):
 
 # ---- Device detection ----
 
-def detect_device_type(ip):
+def detect_device_type(ip, hostname=""):
     """Guess device type from port probing.
 
     Priority:
@@ -108,10 +133,19 @@ def detect_device_type(ip):
       5. Port 80/443 open, no Windows ports → router  (web-only admin, e.g. home router)
       6. Anything else                      → server
     """
+    normalized_hostname = (hostname or "").split(".", 1)[0].lower()
+
     if ip == GATEWAY_IP:
         return "router"
 
-    probe_ports = [9100, 23, 3389, 80, 443, 445]
+    if normalized_hostname.startswith(ROUTER_HOSTNAME_PREFIXES):
+        return "router"
+    if normalized_hostname.startswith(SWITCH_HOSTNAME_PREFIXES):
+        return "switch"
+    if normalized_hostname.startswith(SERVER_HOSTNAME_PREFIXES):
+        return "server"
+
+    probe_ports = sorted({9100, 23, 3389, 80, 443, 445, *SERVER_EVIDENCE_PORTS})
     open_ports = set()
     for port in probe_ports:
         try:
@@ -129,10 +163,17 @@ def detect_device_type(ip):
         return "router"
     if 3389 in open_ports:
         return "workstation"
+    if open_ports.intersection(SERVER_EVIDENCE_PORTS):
+        return "server"
     # Web interface present but no Windows/printer ports → likely a router or AP.
     if (80 in open_ports or 443 in open_ports) and 445 not in open_ports:
         return "router"
-    return "server"
+    return "unknown"
+
+
+def is_accepted_discovered_device(device):
+    """Return True when a discovered host should be monitored or registered."""
+    return device.get("type", "unknown").lower() in ACCEPTED_DEVICE_TYPES
 
 # ---- Discovery ----
 
@@ -154,7 +195,7 @@ def _identify_device(ip):
     if not alive:
         return None
     hostname = resolve_hostname(ip)
-    device_type = detect_device_type(ip)
+    device_type = detect_device_type(ip, hostname)
     return {"hostname": hostname, "ip_address": ip, "type": device_type}
 
 
@@ -173,11 +214,11 @@ def discover_devices(network_range):
         futures = {ex.submit(_identify_device, ip): ip for ip in hosts if not is_ignored(ip)}
         for future in as_completed(futures):
             result = future.result()
-            if result:
+            if result and is_accepted_discovered_device(result):
                 alive.append(result)
 
     alive.sort(key=lambda d: ipaddress.ip_address(d["ip_address"]))
-    print(f"Discovery found {len(alive)} device(s): {[d['ip_address'] for d in alive]}")
+    print(f"Discovery accepted {len(alive)} device(s): {[d['ip_address'] for d in alive]}")
     return alive
 
 # ---- Backend communication ----
@@ -407,7 +448,9 @@ def main():
         for device in devices:
             ip = device["ip_address"]
             hostname = device.get("hostname", ip)
-            device_type = device.get("type", "server")
+            device_type = device.get("type", "unknown")
+            if device_type == "unknown":
+                continue
             alive, rtt_ms, packet_loss_pct = ping_device(ip)
             state = device_state.get(ip, {"failed": 0, "offline": False})
 

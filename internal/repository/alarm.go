@@ -39,7 +39,7 @@ func (r *alarmRepository) Create(alarm *models.Alarm) error {
 }
 
 func (r *alarmRepository) FindAll(filter AlarmFilter) ([]models.Alarm, error) {
-	query := `SELECT id, alarm_number, alarm, hyperlink, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person
+	query := `SELECT id, alarm_number, alarm, COALESCE(hyperlink, ''), status, submit_date, last_modified_date, close_date, priority, COALESCE(assigned_group, ''), COALESCE(assigned_person, '')
 			  FROM alarms WHERE TRUE`
 	args := []any{}
 	n := 1
@@ -71,7 +71,7 @@ func (r *alarmRepository) FindAll(filter AlarmFilter) ([]models.Alarm, error) {
 
 func (r *alarmRepository) FindByID(id uuid.UUID) (*models.Alarm, error) {
 	a, err := scanAlarm(r.db.QueryRow(
-		`SELECT id, alarm_number, alarm, hyperlink, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person
+		`SELECT id, alarm_number, alarm, COALESCE(hyperlink, ''), status, submit_date, last_modified_date, close_date, priority, COALESCE(assigned_group, ''), COALESCE(assigned_person, '')
 	     FROM alarms WHERE id = $1`, id,
 	))
 	if err == sql.ErrNoRows{
@@ -82,7 +82,7 @@ func (r *alarmRepository) FindByID(id uuid.UUID) (*models.Alarm, error) {
 
 func (r *alarmRepository) FindByNumber(number string) (*models.Alarm, error) {
 	a, err := scanAlarm(r.db.QueryRow(
-		`SELECT id, alarm_number, alarm, hyperlink, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person
+		`SELECT id, alarm_number, alarm, COALESCE(hyperlink, ''), status, submit_date, last_modified_date, close_date, priority, COALESCE(assigned_group, ''), COALESCE(assigned_person, '')
 		 FROM alarms WHERE alarm_number = $1`, number,
 	))
 	if err == sql.ErrNoRows{
@@ -149,7 +149,7 @@ func (r *incidentRepository) Create(incident *models.Incident) error {
 
 // FindAll fetches incidents with filters, then does a second IN query to populate
 func (r *incidentRepository) FindAll(filter IncidentFilter) ([]models.Incident, error) {
-	query := `SELECT id, incident_number, alarm_id, hyperlink, description, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person
+	query := `SELECT id, incident_number, alarm_id, COALESCE(hyperlink, ''), description, status, submit_date, last_modified_date, close_date, priority, COALESCE(assigned_group, ''), COALESCE(assigned_person, '')
 			  FROM incidents WHERE TRUE`
 	args := []any{}
 	n := 1
@@ -191,7 +191,7 @@ func (r *incidentRepository) FindAll(filter IncidentFilter) ([]models.Incident, 
 
 func (r *incidentRepository) FindByID(id uuid.UUID) (*models.Incident, error) {
 	inc, err := scanIncident(r.db.QueryRow(
-		`SELECT id, incident_number, alarm_id, hyperlink, description, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person
+		`SELECT id, incident_number, alarm_id, COALESCE(hyperlink, ''), description, status, submit_date, last_modified_date, close_date, priority, COALESCE(assigned_group, ''), COALESCE(assigned_person, '')
 		 FROM incidents WHERE id = $1`, id,
 	))
 	if err == sql.ErrNoRows{
@@ -211,7 +211,7 @@ func (r *incidentRepository) FindByID(id uuid.UUID) (*models.Incident, error) {
 
 func (r *incidentRepository) FindByNumber(number string) (*models.Incident, error) {
 	inc, err := scanIncident(r.db.QueryRow(
-		`SELECT id, incident_number, alarm_id, hyperlink, description, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person
+		`SELECT id, incident_number, alarm_id, COALESCE(hyperlink, ''), description, status, submit_date, last_modified_date, close_date, priority, COALESCE(assigned_group, ''), COALESCE(assigned_person, '')
 		 FROM incidents WHERE incident_number = $1`, number,
 	))
 	if err == sql.ErrNoRows{
@@ -231,7 +231,7 @@ func (r *incidentRepository) FindByNumber(number string) (*models.Incident, erro
 
 func (r *incidentRepository) FindByAlarm(alarmID uuid.UUID) ([]models.Incident, error) {
 	rows, err := r.db.Query(
-		`SELECT id, incident_number, alarm_id, hyperlink, description, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person
+		`SELECT id, incident_number, alarm_id, COALESCE(hyperlink, ''), description, status, submit_date, last_modified_date, close_date, priority, COALESCE(assigned_group, ''), COALESCE(assigned_person, '')
 		 FROM incidents WHERE alarm_id = $1 ORDER BY submit_date DESC`, alarmID,
 	)
 	if err != nil {
@@ -280,7 +280,7 @@ func (r *incidentRepository) preloadAlarms(incidents []models.Incident) error{
 	}
 	ph, args := buildInPlaceholders(idSet)
 	rows, err := r.db.Query(
-		`SELECT id, alarm_number, alarm, hyperlink, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person
+		`SELECT id, alarm_number, alarm, COALESCE(hyperlink, ''), status, submit_date, last_modified_date, close_date, priority, COALESCE(assigned_group, ''), COALESCE(assigned_person, '')
 		 FROM alarms WHERE id IN (`+ph+`)`, args...,
 	)
 	if err != nil {
@@ -338,13 +338,17 @@ func scanAlarms(rows *sql.Rows) ([]models.Alarm, error) {
 
 func scanIncident(s scanner) (*models.Incident, error) {
 	inc := &models.Incident{}
+	var alarmID nullUUID
 	err := s.Scan(
-		&inc.ID, &inc.IncidentNumber, &inc.AlarmID, &inc.Hyperlink, &inc.Description,
+		&inc.ID, &inc.IncidentNumber, &alarmID, &inc.Hyperlink, &inc.Description,
 		&inc.Status, &inc.SubmitDate, &inc.LastModifiedDate, &inc.CloseDate,
 		&inc.Priority, &inc.AssignedGroup, &inc.AssignedPerson,
 	)
 	if err != nil {
 		return nil, err
+	}
+	if alarmID.Valid {
+		inc.AlarmID = &alarmID.UUID
 	}
 	return inc, nil
 }
@@ -398,7 +402,7 @@ func (r *problemRepository) Create(problem *models.Problem) error {
 }
 
 func (r *problemRepository) FindAll(filter ProblemFilter) ([]models.Problem, error) {
-	query := `SELECT id, problem_number, alarm_name, incident_id, hyperlink, description, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person, occurrence_count
+	query := `SELECT id, problem_number, alarm_name, incident_id, COALESCE(hyperlink, ''), description, status, submit_date, last_modified_date, close_date, priority, COALESCE(assigned_group, ''), COALESCE(assigned_person, ''), occurrence_count
 			  FROM problems WHERE TRUE`
 	args := []any{}
 	n := 1
@@ -441,7 +445,7 @@ func (r *problemRepository) FindAll(filter ProblemFilter) ([]models.Problem, err
 
 func (r *problemRepository) FindByID(id uuid.UUID) (*models.Problem, error) {
 	prob, err := scanProblem(r.db.QueryRow(
-		`SELECT id, problem_number, alarm_name, incident_id, hyperlink, description, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person, occurrence_count
+		`SELECT id, problem_number, alarm_name, incident_id, COALESCE(hyperlink, ''), description, status, submit_date, last_modified_date, close_date, priority, COALESCE(assigned_group, ''), COALESCE(assigned_person, ''), occurrence_count
 		 FROM problems WHERE id = $1`, id,
 	))
 	if err == sql.ErrNoRows{
@@ -461,7 +465,7 @@ func (r *problemRepository) FindByID(id uuid.UUID) (*models.Problem, error) {
 
 func (r *problemRepository) FindByNumber(number string) (*models.Problem, error) {
 	prob, err := scanProblem(r.db.QueryRow(
-		`SELECT id, problem_number, alarm_name, incident_id, hyperlink, description, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person, occurrence_count
+		`SELECT id, problem_number, alarm_name, incident_id, COALESCE(hyperlink, ''), description, status, submit_date, last_modified_date, close_date, priority, COALESCE(assigned_group, ''), COALESCE(assigned_person, ''), occurrence_count
 		 FROM problems WHERE problem_number = $1`, number,
 	))
 	if err == sql.ErrNoRows {
@@ -481,7 +485,7 @@ func (r *problemRepository) FindByNumber(number string) (*models.Problem, error)
 
 func (r *problemRepository) FindOpenByAlarmName(alarmName string) (*models.Problem, error) {
 	prob, err := scanProblem(r.db.QueryRow(
-		`SELECT id, problem_number, alarm_name, incident_id, hyperlink, description, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person, occurrence_count
+		`SELECT id, problem_number, alarm_name, incident_id, COALESCE(hyperlink, ''), description, status, submit_date, last_modified_date, close_date, priority, COALESCE(assigned_group, ''), COALESCE(assigned_person, ''), occurrence_count
 		 FROM problems WHERE alarm_name = $1 AND status != $2`, alarmName, models.StatusClosed,
 	))
 	if err == sql.ErrNoRows {
@@ -544,7 +548,7 @@ func (r *ticketRepository) Create(ticket *models.Ticket) error {
 }
 
 func (r *ticketRepository) FindAll(filter TicketFilter) ([]models.Ticket, error) {
-	query := `SELECT id, ticket_number, incident_id, title, status, priority, assigned_group, assigned_person, submit_date, last_modified_date, close_date
+	query := `SELECT id, ticket_number, incident_id, title, status, priority, COALESCE(assigned_group, ''), COALESCE(assigned_person, ''), submit_date, last_modified_date, close_date
 			  FROM tickets WHERE TRUE`
 	args := []any{}
 	n := 1
@@ -586,7 +590,7 @@ func (r *ticketRepository) FindAll(filter TicketFilter) ([]models.Ticket, error)
 
 func (r *ticketRepository) FindByID(id uuid.UUID) (*models.Ticket, error) {
 	tick, err := scanTicket(r.db.QueryRow(
-		`SELECT id, ticket_number, incident_id, title, status, priority, assigned_group, assigned_person, submit_date, last_modified_date, close_date
+		`SELECT id, ticket_number, incident_id, title, status, priority, COALESCE(assigned_group, ''), COALESCE(assigned_person, ''), submit_date, last_modified_date, close_date
 		 FROM tickets WHERE id = $1`, id,
 	))
 	if err == sql.ErrNoRows{
@@ -606,7 +610,7 @@ func (r *ticketRepository) FindByID(id uuid.UUID) (*models.Ticket, error) {
 
 func (r *ticketRepository) FindByNumber(number string) (*models.Ticket, error) {
 	tick, err := scanTicket(r.db.QueryRow(
-		`SELECT id, ticket_number, incident_id, title, status, priority, assigned_group, assigned_person, submit_date, last_modified_date, close_date
+		`SELECT id, ticket_number, incident_id, title, status, priority, COALESCE(assigned_group, ''), COALESCE(assigned_person, ''), submit_date, last_modified_date, close_date
 		 FROM tickets WHERE ticket_number = $1`, number,
 	))
 	if err == sql.ErrNoRows {
@@ -626,7 +630,7 @@ func (r *ticketRepository) FindByNumber(number string) (*models.Ticket, error) {
 
 func (r *ticketRepository) FindByIncidentID(incidentID uuid.UUID) (*models.Ticket, error) {
 	tick, err := scanTicket(r.db.QueryRow(
-		`SELECT id, ticket_number, incident_id, title, status, priority, assigned_group, assigned_person, submit_date, last_modified_date, close_date
+		`SELECT id, ticket_number, incident_id, title, status, priority, COALESCE(assigned_group, ''), COALESCE(assigned_person, ''), submit_date, last_modified_date, close_date
 		 FROM tickets WHERE incident_id = $1`, incidentID,
 	))
 	if err == sql.ErrNoRows {
@@ -709,13 +713,17 @@ func (r *ticketRepository) CreateNote(note *models.TicketNote) error {
 
 func scanProblem(s scanner) (*models.Problem, error) {
 	p := &models.Problem{}
+	var incidentID nullUUID
 	err := s.Scan(
-		&p.ID, &p.ProblemNumber, &p.AlarmName, &p.IncidentID, &p.Hyperlink, &p.Description,
+		&p.ID, &p.ProblemNumber, &p.AlarmName, &incidentID, &p.Hyperlink, &p.Description,
 		&p.Status, &p.SubmitDate, &p.LastModifiedDate, &p.CloseDate,
 		&p.Priority, &p.AssignedGroup, &p.AssignedPerson, &p.OccurrenceCount,
 	)
 	if err != nil {
 		return nil, err
+	}
+	if incidentID.Valid {
+		p.IncidentID = &incidentID.UUID
 	}
 	return p, nil
 }
@@ -744,7 +752,7 @@ func (r *problemRepository) preloadIncidents(problems []models.Problem) error {
 	}
 	ph, args := buildInPlaceholders(idSet)
 	rows, err := r.db.Query(
-		`SELECT id, incident_number, alarm_id, hyperlink, description, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person
+		`SELECT id, incident_number, alarm_id, COALESCE(hyperlink, ''), description, status, submit_date, last_modified_date, close_date, priority, COALESCE(assigned_group, ''), COALESCE(assigned_person, '')
 		 FROM incidents WHERE id IN (`+ph+`)`, args...,
 	)
 	if err != nil {
@@ -822,7 +830,7 @@ func (r *ticketRepository) preloadIncidents(tickets []models.Ticket) error {
 	}
 	ph, args := buildInPlaceholders(idSet)
 	rows, err := r.db.Query(
-		`SELECT id, incident_number, alarm_id, hyperlink, description, status, submit_date, last_modified_date, close_date, priority, assigned_group, assigned_person
+		`SELECT id, incident_number, alarm_id, COALESCE(hyperlink, ''), description, status, submit_date, last_modified_date, close_date, priority, COALESCE(assigned_group, ''), COALESCE(assigned_person, '')
 		 FROM incidents WHERE id IN (`+ph+`)`, args...,
 	)
 	if err != nil {
