@@ -30,7 +30,7 @@ import type {
   CreateGroupPayload,
   CreateEmployeePayload,
 } from "../types/domain";
-import { getValidated, patchValidated, postValidated } from "./api";
+import { getValidated, patchValidated, postValidated, deleteValidated } from "./api";
 
 const devicesEnvelopeSchema = collectionEnvelopeSchema(deviceSchema);
 const alarmsEnvelopeSchema = collectionEnvelopeSchema(alarmSchema);
@@ -115,6 +115,10 @@ export async function createGroup(payload: CreateGroupPayload): Promise<Group> {
   return postValidated("/groups", payload, groupSchema);
 }
 
+export async function deleteGroup(groupId: string | number): Promise<void> {
+  return deleteValidated(`/groups/${groupId}`);
+}
+
 export async function getEmployees(groupId?: string): Promise<Employee[]> {
   const qs = groupId ? `?group_id=${groupId}` : "";
   const payload = await getValidated(`/employees${qs}`, employeesEnvelopeSchema);
@@ -123,4 +127,8 @@ export async function getEmployees(groupId?: string): Promise<Employee[]> {
 
 export async function createEmployee(payload: CreateEmployeePayload): Promise<Employee> {
   return postValidated("/employees", payload, employeeSchema);
+}
+
+export async function deleteEmployee(employeeId: string | number): Promise<void> {
+  return deleteValidated(`/employees/${employeeId}`);
 }
