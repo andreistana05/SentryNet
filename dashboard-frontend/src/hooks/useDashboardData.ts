@@ -31,8 +31,10 @@ import {
   createTicketNote,
   getGroups,
   createGroup,
+  deleteGroup,
   getEmployees,
   createEmployee,
+  deleteEmployee,
 } from "../services/dashboardService";
 
 export function useDashboardOverview() {
@@ -245,6 +247,17 @@ export function useCreateGroupMutation() {
   });
 }
 
+export function useDeleteGroupMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (groupId: string | number) => deleteGroup(groupId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey: ["groups"]});
+      queryClient.invalidateQueries({queryKey: ["employees"]});
+    },
+  });
+}
+
 export function useEmployees(groupId?: string) {
   return useQuery<Employee[]>({
     queryKey: ["employees", groupId],
@@ -257,6 +270,16 @@ export function useCreateEmployeeMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: CreateEmployeePayload) => createEmployee(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey: ["employees"]});
+    },
+  });
+}
+
+export function useDeleteEmployeeMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (employeeId: string | number) => deleteEmployee(employeeId),
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: ["employees"]});
     },

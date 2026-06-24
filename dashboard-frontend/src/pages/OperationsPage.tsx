@@ -181,7 +181,12 @@ function TicketNotesComposer({
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const popupRef = useRef<HTMLDivElement | null>(null);
   const [draft, setDraft] = useState("");
-  const [menuPosition, setMenuPosition] = useState<{ left: number; bottom: number; width: number } | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{
+    left: number;
+    width: number;
+    top?: number;
+    bottom?: number;
+  } | null>(null);
   const notesQuery = useTicketNotes(isOpen ? ticket.id : null);
   const createNoteMutation = useCreateTicketNoteMutation();
   const notes = notesQuery.data ?? [];
@@ -206,10 +211,17 @@ function TicketNotesComposer({
         return;
       }
 
+      const width = Math.max(rect.width, 360);
+      const left = Math.max(16, Math.min(rect.left, window.innerWidth - width - 16));
+      const bottom = window.innerHeight - rect.top + 10;
+      const top = rect.bottom + 10;
+      const popupHeight = Math.min(window.innerHeight * 0.8, 560);
+      const openDownward = window.innerHeight - rect.bottom >= popupHeight || rect.top < popupHeight;
+
       setMenuPosition({
-        left: Math.max(16, rect.right - Math.max(rect.width, 360)),
-        bottom: window.innerHeight - rect.top + 10,
-        width: Math.max(rect.width, 360),
+        left,
+        width,
+        ...(openDownward ? { top } : { bottom }),
       });
     }
 
@@ -283,8 +295,10 @@ function TicketNotesComposer({
               aria-labelledby={`${composerId}-title`}
               style={{
                 left: `${menuPosition.left}px`,
-                bottom: `${menuPosition.bottom}px`,
                 width: `${menuPosition.width}px`,
+                ...(menuPosition.top != null
+                  ? { top: `${menuPosition.top}px` }
+                  : { bottom: `${menuPosition.bottom}px` }),
               }}
             >
               <div className="ticket-note-popup-header">

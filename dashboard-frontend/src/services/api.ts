@@ -47,5 +47,12 @@ export async function patchValidated<TResponse, TPayload>(
   return schema.parse(response.data);
 }
 
+export async function deleteValidated(
+  url: string,
+  config?: AxiosRequestConfig,
+): Promise<void> {
+  await api.delete(url, config);
+}
+
 export { API_BASE_URL };
 export default api;
