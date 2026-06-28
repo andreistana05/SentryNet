@@ -73,6 +73,7 @@ const devices = [
       { type: "disk_usage", value: 74, unit: "%", timestamp: minutesAgo(1) },
       { type: "temperature", value: 78, unit: "C", timestamp: minutesAgo(1) },
       { type: "latency", value: 240, unit: "ms", timestamp: minutesAgo(1) },
+      { type: "snmp_if_in_octets", value: 42.7, unit: "GB", timestamp: minutesAgo(1) },
     ],
   },
   {
@@ -87,6 +88,7 @@ const devices = [
       { type: "ram_usage", value: 82, unit: "%", timestamp: minutesAgo(4) },
       { type: "disk_usage", value: 89.5, unit: "%", timestamp: minutesAgo(4) },
       { type: "temperature", value: 65, unit: "C", timestamp: minutesAgo(4) },
+      { type: "snmp_if_in_octets", value: 68.4, unit: "GB", timestamp: minutesAgo(4) },
     ],
   },
   {
@@ -129,6 +131,7 @@ const devices = [
       { type: "disk_usage", value: 62, unit: "%", timestamp: minutesAgo(3) },
       { type: "temperature", value: 46, unit: "C", timestamp: minutesAgo(3) },
       { type: "latency", value: 21, unit: "ms", timestamp: minutesAgo(3) },
+      { type: "snmp_if_in_octets", value: 18.6, unit: "GB", timestamp: minutesAgo(3) },
     ],
   },
   {
